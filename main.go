@@ -2,41 +2,39 @@ package main
 
 import (
 	"flag"
-	"net/http"
+	"time"
 
-	"github.com/labstack/echo/v4"
 	"github.com/perses/common/app"
+	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
+	"github.com/perses/metrics-usage/source/metric"
+	"github.com/sirupsen/logrus"
 )
 
-type endpoint struct {
-	db database.Database
-}
-
-func (e *endpoint) RegisterRoute(ech *echo.Echo) {
-	ech.GET("/api/v1/metrics", e.ListMetrics)
-	ech.GET("/api/v1/metrics/:id", e.GetMetric)
-}
-
-func (e *endpoint) GetMetric(ctx echo.Context) error {
-	name := ctx.Param("id")
-	metric := e.db.GetMetric(name)
-	if metric == nil {
-		return echo.NewHTTPError(http.StatusNotFound)
-	}
-	return ctx.JSON(http.StatusOK, metric)
-}
-
-func (e *endpoint) ListMetrics(ctx echo.Context) error {
-	return ctx.JSON(http.StatusOK, e.db.ListMetrics())
-}
-
 func main() {
+	configFile := flag.String("config", "", "Path to the YAML configuration file for the API. Configuration settings can be overridden when using environment variables.")
+	pprof := flag.Bool("pprof", false, "Enable pprof")
 	flag.Parse()
-	runner := app.NewRunner().WithDefaultHTTPServer("metrics_usage")
+
+	// load the config from file or/and from environment
+	conf, err := config.Resolve(*configFile)
+	if err != nil {
+		logrus.WithError(err).Fatalf("error reading configuration from file %q or from environment", *configFile)
+	}
 
 	db := database.New()
+	runner := app.NewRunner().WithDefaultHTTPServer("metrics_usage")
 
-	runner.HTTPServerBuilder().APIRegistration(&endpoint{db: db})
+	if conf.MetricCollector.Enable {
+		metricCollector, collectorErr := metric.NewCollector(db, conf.MetricCollector)
+		if collectorErr != nil {
+			logrus.WithError(collectorErr).Fatal("unable to create the metric collector")
+		}
+		runner.WithTimerTasks(time.Duration(conf.MetricCollector.Period), metricCollector)
+	}
+
+	runner.HTTPServerBuilder().
+		ActivatePprof(*pprof).
+		APIRegistration(&endpoint{db: db})
 	runner.Start()
 }

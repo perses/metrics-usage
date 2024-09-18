@@ -1,11 +1,11 @@
 package v1
 
 type MetricUsage struct {
-	Dashboards     []string `json:"dashboards"`
-	RecordingRules []string `json:"recordingRules"`
-	AlertRules     []string `json:"alertRules"`
+	Dashboards     []string `json:"dashboards,omitempty"`
+	RecordingRules []string `json:"recordingRules,omitempty"`
+	AlertRules     []string `json:"alertRules,omitempty"`
 }
 
 type Metric struct {
-	Usage MetricUsage `json:"usage"`
+	Usage *MetricUsage `json:"usage,omitempty"`
 }

@@ -57,9 +57,9 @@ func (d *db) Enqueue(metrics map[string]*v1.Metric) {
 }
 
 func (d *db) watchQueue() {
-	for metrics := range d.queue {
+	for data := range d.queue {
 		d.mutex.Lock()
-		for metricName, metric := range metrics {
+		for metricName, metric := range data {
 			if _, ok := d.metrics[metricName]; !ok {
 				d.metrics[metricName] = metric
 			} else {
