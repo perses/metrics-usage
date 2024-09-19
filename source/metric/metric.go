@@ -9,7 +9,6 @@ import (
 	"github.com/perses/common/async"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
-	apiModelV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
@@ -62,12 +61,12 @@ func (g *metricCollector) Execute(ctx context.Context, _ context.CancelFunc) err
 		logrus.WithError(err).Error("failed to query metrics")
 		return nil
 	}
-	result := make(map[string]*apiModelV1.Metric)
+	result := make([]string, 0, len(labelValues))
 	for _, metricName := range labelValues {
-		result[string(metricName)] = &apiModelV1.Metric{}
+		result = append(result, string(metricName))
 	}
 	// Finally, send the metric collected to the database; db will take care to store these data properly
-	g.db.Enqueue(result)
+	g.db.EnqueueMetricList(result)
 	return nil
 }
 

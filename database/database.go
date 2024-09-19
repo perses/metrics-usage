@@ -4,32 +4,41 @@ import (
 	"sync"
 
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/sirupsen/logrus"
 )
 
 type Database interface {
 	GetMetric(name string) *v1.Metric
 	ListMetrics() map[string]*v1.Metric
-	Enqueue(metrics map[string]*v1.Metric)
+	EnqueueMetricList(metrics []string)
+	EnqueueUsage(usages map[string]*v1.MetricUsage)
 }
 
 func New() Database {
 	d := &db{
-		Database: nil,
-		metrics:  make(map[string]*v1.Metric),
-		queue:    make(chan map[string]*v1.Metric, 250),
+		Database:     nil,
+		metrics:      make(map[string]*v1.Metric),
+		usageQueue:   make(chan map[string]*v1.MetricUsage, 250),
+		metricsQueue: make(chan []string, 10),
 	}
 
-	go d.watchQueue()
+	go d.watchUsageQueue()
+	go d.watchMetricsQueue()
 	return d
 }
 
 type db struct {
 	Database
+	// metrics is the list of metric name (as a key) associated to their usage based on the different collector activated.
+	// This struct is our "database".
 	metrics map[string]*v1.Metric
-	// queue is the way to send data to write in the database.
+	// metricsQueue is the channel that should be used to send and receive the list of metric name to keep in memory.
+	// Based on this list, we will then collect their usage.
+	metricsQueue chan []string
+	// usageQueue is the way to send the usage per metric to write in the database.
 	// There will be no other way to write in it.
 	// Doing that allows us to accept more HTTP requests to write data and to delay the actual writing.
-	queue chan map[string]*v1.Metric
+	usageQueue chan map[string]*v1.MetricUsage
 	// We are expecting to spend more time to write data than actually read.
 	// Which result having too many writers,
 	// and so unable to read the data because the lock queue is too long to be able to access to the data.
@@ -52,16 +61,32 @@ func (d *db) ListMetrics() map[string]*v1.Metric {
 	return d.metrics
 }
 
-func (d *db) Enqueue(metrics map[string]*v1.Metric) {
-	d.queue <- metrics
+func (d *db) EnqueueMetricList(metrics []string) {
+	d.metricsQueue <- metrics
 }
 
-func (d *db) watchQueue() {
-	for data := range d.queue {
+func (d *db) EnqueueUsage(usages map[string]*v1.MetricUsage) {
+	d.usageQueue <- usages
+}
+
+func (d *db) watchMetricsQueue() {
+	for _metrics := range d.metricsQueue {
 		d.mutex.Lock()
-		for metricName, metric := range data {
+		for _, metricName := range _metrics {
 			if _, ok := d.metrics[metricName]; !ok {
-				d.metrics[metricName] = metric
+				d.metrics[metricName] = &v1.Metric{}
+			}
+		}
+		d.mutex.Unlock()
+	}
+}
+
+func (d *db) watchUsageQueue() {
+	for data := range d.usageQueue {
+		d.mutex.Lock()
+		for metricName := range data {
+			if _, ok := d.metrics[metricName]; !ok {
+				logrus.Debugf("metric_name %q is used but it's not found by the metric collector", metricName)
 			} else {
 				// TODO need to merge the data
 			}
