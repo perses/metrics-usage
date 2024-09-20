@@ -46,6 +46,7 @@ func main() {
 
 	runner.HTTPServerBuilder().
 		ActivatePprof(*pprof).
-		APIRegistration(&endpoint{db: db})
+		APIRegistration(metric.NewAPI(db)).
+		APIRegistration(rules.NewAPI(db))
 	runner.Start()
 }

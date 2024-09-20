@@ -1,13 +1,20 @@
-package main
+package metric
 
 import (
 	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	persesEcho "github.com/perses/common/echo"
 	"github.com/perses/metrics-usage/database"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
 )
+
+func NewAPI(db database.Database) persesEcho.Register {
+	return &endpoint{
+		db: db,
+	}
+}
 
 type endpoint struct {
 	db database.Database
@@ -39,5 +46,5 @@ func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
 	}
 	e.db.EnqueueUsage(data)
-	return ctx.JSON(http.StatusNoContent, data)
+	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
 }

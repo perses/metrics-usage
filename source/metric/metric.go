@@ -7,14 +7,14 @@ import (
 	"github.com/perses/common/async"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
-	"github.com/perses/metrics-usage/utils"
+	"github.com/perses/metrics-usage/utils/prometheus"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
 	"github.com/sirupsen/logrus"
 )
 
 func NewCollector(db database.Database, cfg config.MetricCollector) (async.SimpleTask, error) {
-	promClient, err := utils.NewPrometheusClient(cfg.PrometheusClient.TLSConfig, cfg.PrometheusClient.URL.String())
+	promClient, err := prometheus.NewClient(cfg.PrometheusClient.TLSConfig, cfg.PrometheusClient.URL.String())
 	if err != nil {
 		return nil, err
 	}
