@@ -2,3 +2,8 @@ metric_collector:
   enable: true
   prometheus_client:
     url: "https://prometheus.demo.do.prometheus.io"
+
+rules_collector:
+  enable: true
+  prometheus_client:
+    url: "https://prometheus.demo.do.prometheus.io"

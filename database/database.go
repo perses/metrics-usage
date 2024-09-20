@@ -18,6 +18,7 @@ func New() Database {
 	d := &db{
 		Database:     nil,
 		metrics:      make(map[string]*v1.Metric),
+		usage:        make(map[string]*v1.MetricUsage),
 		usageQueue:   make(chan map[string]*v1.MetricUsage, 250),
 		metricsQueue: make(chan []string, 10),
 	}
@@ -32,6 +33,8 @@ type db struct {
 	// metrics is the list of metric name (as a key) associated to their usage based on the different collector activated.
 	// This struct is our "database".
 	metrics map[string]*v1.Metric
+	// usage is a buffer in case the metric name has not yet been collected
+	usage map[string]*v1.MetricUsage
 	// metricsQueue is the channel that should be used to send and receive the list of metric name to keep in memory.
 	// Based on this list, we will then collect their usage.
 	metricsQueue chan []string
@@ -75,6 +78,11 @@ func (d *db) watchMetricsQueue() {
 		for _, metricName := range _metrics {
 			if _, ok := d.metrics[metricName]; !ok {
 				d.metrics[metricName] = &v1.Metric{}
+				if usage, usageExists := d.usage[metricName]; usageExists {
+					// TODO at some point we need to erase the usage map because it will cause a memory leak
+					d.metrics[metricName].Usage = usage
+					delete(d.usage, metricName)
+				}
 			}
 		}
 		d.mutex.Unlock()
@@ -84,11 +92,14 @@ func (d *db) watchMetricsQueue() {
 func (d *db) watchUsageQueue() {
 	for data := range d.usageQueue {
 		d.mutex.Lock()
-		for metricName := range data {
+		for metricName, usage := range data {
 			if _, ok := d.metrics[metricName]; !ok {
 				logrus.Debugf("metric_name %q is used but it's not found by the metric collector", metricName)
+				// todo then merge usage here
+				d.usage[metricName] = usage
 			} else {
 				// TODO need to merge the data
+				d.metrics[metricName].Usage = usage
 			}
 		}
 		d.mutex.Unlock()

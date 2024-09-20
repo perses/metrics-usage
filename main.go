@@ -8,6 +8,7 @@ import (
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
 	"github.com/perses/metrics-usage/source/metric"
+	"github.com/perses/metrics-usage/source/rules"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,11 +27,21 @@ func main() {
 	runner := app.NewRunner().WithDefaultHTTPServer("metrics_usage")
 
 	if conf.MetricCollector.Enable {
-		metricCollector, collectorErr := metric.NewCollector(db, conf.MetricCollector)
+		metricCollectorConfig := conf.MetricCollector
+		metricCollector, collectorErr := metric.NewCollector(db, metricCollectorConfig)
 		if collectorErr != nil {
 			logrus.WithError(collectorErr).Fatal("unable to create the metric collector")
 		}
-		runner.WithTimerTasks(time.Duration(conf.MetricCollector.Period), metricCollector)
+		runner.WithTimerTasks(time.Duration(metricCollectorConfig.Period), metricCollector)
+	}
+
+	if conf.RulesCollector.Enable {
+		rulesCollectorConfig := conf.RulesCollector
+		rulesCollector, collectorErr := rules.NewCollector(db, rulesCollectorConfig)
+		if collectorErr != nil {
+			logrus.WithError(collectorErr).Fatal("unable to create the rules collector")
+		}
+		runner.WithTimerTasks(time.Duration(rulesCollectorConfig.Period), rulesCollector)
 	}
 
 	runner.HTTPServerBuilder().

@@ -36,3 +36,22 @@ func (c *MetricCollector) Verify() error {
 	}
 	return nil
 }
+
+type RulesCollector struct {
+	Enable           bool           `yaml:"enable"`
+	Period           model.Duration `yaml:"period"`
+	PrometheusClient HTTPClient     `yaml:"prometheus_client"`
+}
+
+func (c *RulesCollector) Verify() error {
+	if !c.Enable {
+		return nil
+	}
+	if c.Period <= 0 {
+		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
+	}
+	if c.PrometheusClient.URL == nil {
+		return fmt.Errorf("missing Prometheus URL for the rules collector")
+	}
+	return nil
+}
