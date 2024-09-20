@@ -1,10 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/perses/metrics-usage/database"
+	v1 "github.com/perses/metrics-usage/pkg/api/v1"
 )
 
 type endpoint struct {
@@ -12,8 +14,10 @@ type endpoint struct {
 }
 
 func (e *endpoint) RegisterRoute(ech *echo.Echo) {
-	ech.GET("/api/v1/metrics", e.ListMetrics)
-	ech.GET("/api/v1/metrics/:id", e.GetMetric)
+	path := "/api/v1/metrics"
+	ech.POST(path, e.PushMetricsUsage)
+	ech.GET(path, e.ListMetrics)
+	ech.GET(fmt.Sprintf("%s/:id", path), e.GetMetric)
 }
 
 func (e *endpoint) GetMetric(ctx echo.Context) error {
@@ -27,4 +31,13 @@ func (e *endpoint) GetMetric(ctx echo.Context) error {
 
 func (e *endpoint) ListMetrics(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, e.db.ListMetrics())
+}
+
+func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
+	data := make(map[string]*v1.MetricUsage)
+	if err := ctx.Bind(&data); err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+	}
+	e.db.EnqueueUsage(data)
+	return ctx.JSON(http.StatusNoContent, data)
 }
