@@ -66,7 +66,7 @@ test: generate
 
 .PHONY: build
 build:
-	@echo ">> build the perses api"
+	@echo ">> build binary"
 	CGO_ENABLED=0 GOARCH=${GOARCH} GOOS=${GOOS} $(GO) build -ldflags "${LDFLAGS}" -o ./bin/metrics-usage ./
 
 .PHONY: update-go-deps
