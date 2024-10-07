@@ -7,3 +7,8 @@ rules_collector:
   enable: true
   prometheus_client:
     url: "https://prometheus.demo.do.prometheus.io"
+
+perses_collector:
+  enable: true
+  http_client:
+    url: "https://demo.perses.dev"

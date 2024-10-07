@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perses/perses/pkg/client/perseshttp"
+	"github.com/perses/perses/pkg/client/config"
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	"github.com/prometheus/common/model"
@@ -58,9 +58,9 @@ func (c *RulesCollector) Verify() error {
 }
 
 type PersesCollector struct {
-	Enable     bool                        `yaml:"enable"`
-	Period     model.Duration              `yaml:"period,omitempty"`
-	HTTPClient perseshttp.RestConfigClient `yaml:"http_client"`
+	Enable     bool                    `yaml:"enable"`
+	Period     model.Duration          `yaml:"period,omitempty"`
+	HTTPClient config.RestConfigClient `yaml:"http_client"`
 }
 
 func (c *PersesCollector) Verify() error {

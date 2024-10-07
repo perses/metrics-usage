@@ -5,7 +5,7 @@ go 1.23.1
 require (
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/perses/common v0.26.0
-	github.com/perses/perses v0.48.0-rc0
+	github.com/perses/perses v0.48.0-rc.1
 	github.com/prometheus/client_golang v1.20.4
 	github.com/prometheus/common v0.59.1
 	github.com/prometheus/prometheus v0.54.1

@@ -15,7 +15,7 @@ import (
 	"github.com/perses/perses/go-sdk/prometheus/query"
 	"github.com/perses/perses/go-sdk/prometheus/variable/promql"
 	persesClientV1 "github.com/perses/perses/pkg/client/api/v1"
-	"github.com/perses/perses/pkg/client/perseshttp"
+	persesClientConfig "github.com/perses/perses/pkg/client/config"
 	v1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/dashboard"
@@ -35,7 +35,7 @@ var variableReplacer = strings.NewReplacer(
 )
 
 func NewCollector(db database.Database, cfg config.PersesCollector) (async.SimpleTask, error) {
-	restClient, err := perseshttp.NewFromConfig(cfg.HTTPClient)
+	restClient, err := persesClientConfig.NewRESTClient(cfg.HTTPClient)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error
 func (c *persesCollector) extractMetricUsageFromPanels(metricUsage map[string]*modelAPIV1.MetricUsage, panels map[string]*v1.Panel, currentDashboard *v1.Dashboard) {
 	for panelName, panel := range panels {
 		for i, q := range panel.Spec.Queries {
-			if q.Spec.Plugin.Kind != "TimeSeriesQuery" { // TODO Use go-sdk v0.48.0-rc1 when published to replace this hardcoding value by the one from the lib
+			if q.Spec.Plugin.Kind != query.PluginKind {
 				logrus.Debugf("In panel %q, skipping query number %d, with the type %q", panelName, i, q.Spec.Plugin.Kind)
 				continue
 			}
@@ -85,9 +85,13 @@ func (c *persesCollector) extractMetricUsageFromPanels(metricUsage map[string]*m
 				logrus.WithError(err).Error("Failed to convert plugin spec to TimeSeriesQuery")
 				continue
 			}
+			if len(spec.Query) == 0 {
+				logrus.Debugf("No PromQL expression for the query %d in the panel %q for the dashboard '%s/%s'", i, panelName, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
+				continue
+			}
 			metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(spec.Query))
 			if err != nil {
-				logrus.WithError(err).Error("Failed to extract metric names from query")
+				logrus.WithError(err).Errorf("Failed to extract metric names from query %d in the panel %q for the dashboard '%s/%s'", i, panelName, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
 				continue
 			}
 			c.populateUsage(metricUsage, metrics, currentDashboard)
@@ -105,7 +109,7 @@ func (c *persesCollector) extractMetricUsageFromVariables(metricUsage map[string
 			logrus.Errorf("variable spec is not of type ListVariableSpec but of type %T", v.Spec)
 			continue
 		}
-		if variableList.Plugin.Kind != "PrometheusPromQLVariable" { // TODO Use go-sdk v0.48.0-rc1 when published to replace this hardcoding value by the one from the lib
+		if variableList.Plugin.Kind != promql.PluginKind {
 			logrus.Debugf("skipping this variable %q as it shouldn't contain any PromQL expression", variableList.Plugin.Kind)
 			continue
 		}
@@ -116,7 +120,7 @@ func (c *persesCollector) extractMetricUsageFromVariables(metricUsage map[string
 		}
 		metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(spec.Expr))
 		if err != nil {
-			logrus.WithError(err).Error("Failed to extract metric names from variable")
+			logrus.WithError(err).Errorf("Failed to extract metric names from variable for the dashboard '%s/%s'", currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
 			continue
 		}
 		c.populateUsage(metricUsage, metrics, currentDashboard)
@@ -145,7 +149,7 @@ func replaceVariables(expr string) string {
 }
 
 func convertPluginSpecToPromQLVariable(plugin common.Plugin) (promql.PluginSpec, error) {
-	data, err := json.Marshal(plugin)
+	data, err := json.Marshal(plugin.Spec)
 	if err != nil {
 		return promql.PluginSpec{}, err
 	}
@@ -155,7 +159,7 @@ func convertPluginSpecToPromQLVariable(plugin common.Plugin) (promql.PluginSpec,
 }
 
 func convertPluginSpecToTimeSeriesQuery(plugin common.Plugin) (query.PluginSpec, error) {
-	data, err := json.Marshal(plugin)
+	data, err := json.Marshal(plugin.Spec)
 	if err != nil {
 		return query.PluginSpec{}, err
 	}
