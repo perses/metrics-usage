@@ -5,6 +5,65 @@ This tool is used to analyze static files such as dashboard, Prometheus alert ru
 
 It can be useful to have an idea where the metrics are used and if they are used. Certainly, if they are not used, you shouldn't let Prometheus scrap it.
 
+This tool provides an API that can be used to get the usage for each metrics collected. Requesting `/api/v1/metrics` will give you something like that:
+
+```json
+{
+  "node_cpu_seconds_total": {
+    "usage": {
+      "dashboards": [
+        "https://demo.perses.dev/api/v1/projects/myinsight/dashboards/first_demo",
+        "https://demo.perses.dev/api/v1/projects/myworkshopproject/dashboards/myfirstdashboard",
+        "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull",
+        "https://demo.perses.dev/api/v1/projects/showcase/dashboards/statchartpanel"
+      ],
+      "recordingRules": [
+        {
+          "prom_link": "https://prometheus.demo.do.prometheus.io",
+          "group_name": "node-exporter.rules",
+          "name": "instance:node_num_cpu:sum"
+        },
+        {
+          "prom_link": "https://prometheus.demo.do.prometheus.io",
+          "group_name": "node-exporter.rules",
+          "name": "instance:node_cpu_utilisation:rate5m"
+        }
+      ],
+      "alertRules": [
+        {
+          "prom_link": "https://prometheus.demo.do.prometheus.io",
+          "group_name": "node-exporter",
+          "name": "NodeCPUHighUsage"
+        },
+        {
+          "prom_link": "https://prometheus.demo.do.prometheus.io",
+          "group_name": "node-exporter",
+          "name": "NodeSystemSaturation"
+        }
+      ]
+    }
+  },
+  "node_cpu_utilization_percent_threshold": {
+    "usage": {
+      "alertRules": [
+        {
+          "prom_link": "https://prometheus.demo.do.prometheus.io",
+          "group_name": "ansible managed alert rules",
+          "name": "NodeCPUUtilizationHigh"
+        }
+      ]
+    }
+  },
+  "node_disk_discard_time_seconds_total": {
+    "usage": {
+      "dashboards": [
+        "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull"
+      ]
+    }
+  }
+}
+```
+
 ## Available Collectors
 
 There is a various way to collect the metric usage, here the complete list of the available collectors:
