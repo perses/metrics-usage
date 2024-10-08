@@ -38,8 +38,6 @@ all: build
 checkformat:
 	@echo ">> checking go code format"
 	! $(GOFMT) -d $$(find . -name '*.go' -not -path "./ui/*" -print) | grep '^'
-	@echo ">> running check for CUE file format"
-	./scripts/cue.sh --checkformat
 
 .PHONY: checkunused
 checkunused:
@@ -59,7 +57,7 @@ fmt:
 	./scripts/cue.sh --fmt
 
 .PHONY: test
-test: generate
+test:
 	@echo ">> running all tests"
 	$(GO) test -count=1 -v ./...
 

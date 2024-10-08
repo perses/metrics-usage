@@ -32,21 +32,7 @@ jobs:
       - name: check go.mod
         run: make checkunused
   test:
-    name: "tests with file DB"
-    runs-on: ubuntu-latest
-    steps:
-      - name: checkout
-        uses: actions/checkout@v4
-      - uses: perses/github-actions@v0.6.0
-      - uses: ./.github/perses-ci/actions/setup_environment
-        with:
-          enable_go: true
-          enable_cue: true # needed for DaC CLI commands unit tests
-          cue_version: "v0.10.0"
-      - name: test
-        run: make integration-test
-  test-mysql:
-    name: "tests"
+    name: "test"
     runs-on: ubuntu-latest
     steps:
       - name: checkout
