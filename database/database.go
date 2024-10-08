@@ -77,7 +77,9 @@ func (d *db) watchMetricsQueue() {
 		d.mutex.Lock()
 		for _, metricName := range _metrics {
 			if _, ok := d.metrics[metricName]; !ok {
+				// As this queue only serves the purpose of storing missing metrics, we are only looking for the one not already present in the database.
 				d.metrics[metricName] = &v1.Metric{}
+				// Since it's a new metric, potentially we already have a usage stored in the buffer.
 				if usage, usageExists := d.usage[metricName]; usageExists {
 					// TODO at some point we need to erase the usage map because it will cause a memory leak
 					d.metrics[metricName].Usage = usage
@@ -95,13 +97,55 @@ func (d *db) watchUsageQueue() {
 		for metricName, usage := range data {
 			if _, ok := d.metrics[metricName]; !ok {
 				logrus.Debugf("metric_name %q is used but it's not found by the metric collector", metricName)
-				// todo then merge usage here
-				d.usage[metricName] = usage
+				// Since the metric_name is not known yet, we need to buffer it.
+				// In a later stage, if the metric is received/known,
+				// we will then use this buffer to populate the usage of the metric.
+				if _, isUsed := d.usage[metricName]; !isUsed {
+					d.usage[metricName] = usage
+				} else {
+					// In that case, we need to merge the usage.
+					d.usage[metricName] = mergeUsage(d.usage[metricName], usage)
+				}
 			} else {
-				// TODO need to merge the data
-				d.metrics[metricName].Usage = usage
+				d.metrics[metricName].Usage = mergeUsage(d.metrics[metricName].Usage, usage)
 			}
 		}
 		d.mutex.Unlock()
 	}
+}
+
+func mergeUsage(old, new *v1.MetricUsage) *v1.MetricUsage {
+	if old == nil {
+		return new
+	}
+	if new == nil {
+		return old
+	}
+	return &v1.MetricUsage{
+		Dashboards:     mergeSlice(old.Dashboards, new.Dashboards),
+		RecordingRules: mergeSlice(old.RecordingRules, new.RecordingRules),
+		AlertRules:     mergeSlice(old.AlertRules, new.AlertRules),
+	}
+}
+
+func mergeSlice[T comparable](old, new []T) []T {
+	if len(old) == 0 {
+		return new
+	}
+	if len(new) == 0 {
+		return old
+	}
+	for _, oldDashboard := range old {
+		found := false
+		for _, newDashboard := range new {
+			if oldDashboard == newDashboard {
+				found = true
+				break
+			}
+		}
+		if !found {
+			new = append(new, oldDashboard)
+		}
+	}
+	return new
 }
