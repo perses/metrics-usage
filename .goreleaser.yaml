@@ -1,0 +1,31 @@
+version: 2
+builds:
+  - id: "metric-usage"
+    main: ./main.go
+    binary: "metric-usage"
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    # We are ignoring this arch because it doesn't compile due to an issue with prometheus:
+    # failed to build for windows_arm_6
+    # github.com/prometheus/prometheus@v0.54.1/tsdb/fileutil/mmap_windows.go:38:12: undefined array length maxMapSize or missing type constraint
+    ignore:
+      - goarch: arm
+        goos: windows
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - "{{.Env.LDFLAGS}}"
+archives:
+  - id: "default"
+    builds:
+      - "metric-usage"
+    format: "tar.gz"
+    files:
+      - LICENSE
+      - README.md

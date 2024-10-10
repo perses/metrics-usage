@@ -73,3 +73,13 @@ update-go-deps:
 	@for m in $$($(GO) list -mod=readonly -m -f '{{ if and (not .Indirect) (not .Main)}}{{.Path}}{{end}}' all); do \
 		$(GO) get -d $$m; \
 	done
+
+
+## Cross build binaries for all platforms (Use "make build" in development)
+.PHONY: cross-build
+cross-build: ## Cross build binaries for all platforms (Use "make build" in development)
+	goreleaser release --snapshot --clean
+
+.PHONY: cross-release
+cross-release:
+	goreleaser release --clean
