@@ -1,8 +1,8 @@
 version: 2
 builds:
-  - id: "metric-usage"
+  - id: "metrics-usage"
     main: ./main.go
-    binary: "metric-usage"
+    binary: "metrics-usage"
     goos:
       - linux
       - windows
@@ -24,7 +24,7 @@ builds:
 archives:
   - id: "default"
     builds:
-      - "metric-usage"
+      - "metrics-usage"
     format: "tar.gz"
     files:
       - LICENSE
