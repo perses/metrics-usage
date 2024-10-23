@@ -6,7 +6,7 @@ require (
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/perses/common v0.26.0
 	github.com/perses/perses v0.48.0
-	github.com/prometheus/client_golang v1.20.4
+	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.0
 	github.com/prometheus/prometheus v0.54.1
 	github.com/sirupsen/logrus v1.9.3
