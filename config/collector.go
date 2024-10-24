@@ -1,22 +1,53 @@
 package config
 
 import (
+	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/perses/perses/pkg/client/config"
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	"github.com/prometheus/common/model"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 const (
 	defaultMetricCollectorPeriodDuration = 12 * time.Hour
+	connectionTimeout                    = 30 * time.Second
 )
 
 type HTTPClient struct {
 	URL       *common.URL       `yaml:"url"`
-	TLSConfig *secret.TLSConfig `yaml:"tls_config"`
+	Oauth     *config.Oauth     `yaml:"oauth,omitempty"`
+	TLSConfig *secret.TLSConfig `yaml:"tls_config,omitempty"`
+}
+
+func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
+	roundTripper, err := config.NewRoundTripper(connectionTimeout, cfg.TLSConfig)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.Oauth != nil {
+		oauthConfig := &clientcredentials.Config{
+			ClientID:     cfg.Oauth.ClientID,
+			ClientSecret: cfg.Oauth.ClientSecret,
+			TokenURL:     cfg.Oauth.TokenURL,
+			Scopes:       cfg.Oauth.Scopes,
+			AuthStyle:    cfg.Oauth.AuthStyle,
+		}
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, &http.Client{
+			Transport: roundTripper,
+			Timeout:   connectionTimeout,
+		})
+		return oauthConfig.Client(ctx), nil
+	}
+	return &http.Client{
+		Transport: roundTripper,
+		Timeout:   connectionTimeout,
+	}, nil
 }
 
 type MetricCollector struct {
@@ -74,4 +105,10 @@ func (c *PersesCollector) Verify() error {
 		return fmt.Errorf("missing Rest URL for the perses collector")
 	}
 	return nil
+}
+
+type GrafanaCollector struct {
+	Enable     bool           `yaml:"enable"`
+	Period     model.Duration `yaml:"period,omitempty"`
+	HTTPClient HTTPClient     `yaml:"http_client"`
 }
