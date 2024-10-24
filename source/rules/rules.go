@@ -14,15 +14,14 @@ import (
 )
 
 func NewCollector(db database.Database, cfg config.RulesCollector) (async.SimpleTask, error) {
-	promURL := cfg.PrometheusClient.URL.String()
-	promClient, err := prometheus.NewClient(cfg.PrometheusClient.TLSConfig, promURL)
+	promClient, err := prometheus.NewClient(cfg.PrometheusClient)
 	if err != nil {
 		return nil, err
 	}
 	return &rulesCollector{
 		client:  promClient,
 		db:      db,
-		promURL: promURL,
+		promURL: cfg.PrometheusClient.URL.String(),
 	}, nil
 }
 

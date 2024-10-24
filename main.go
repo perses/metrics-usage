@@ -7,6 +7,7 @@ import (
 	"github.com/perses/common/app"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
+	"github.com/perses/metrics-usage/source/grafana"
 	"github.com/perses/metrics-usage/source/metric"
 	"github.com/perses/metrics-usage/source/perses"
 	"github.com/perses/metrics-usage/source/rules"
@@ -52,6 +53,15 @@ func main() {
 			logrus.WithError(collectorErr).Fatal("unable to create the perses collector")
 		}
 		runner.WithTimerTasks(time.Duration(persesCollectorConfig.Period), persesCollector)
+	}
+
+	if conf.GrafanaCollector.Enable {
+		grafanaCollectorConfig := conf.GrafanaCollector
+		grafanaCollector, collectorErr := grafana.NewCollector(db, grafanaCollectorConfig)
+		if collectorErr != nil {
+			logrus.WithError(collectorErr).Fatal("unable to create the grafana collector")
+		}
+		runner.WithTimerTasks(time.Duration(grafanaCollectorConfig.Period), grafanaCollector)
 	}
 
 	runner.HTTPServerBuilder().
