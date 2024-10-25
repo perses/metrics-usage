@@ -72,10 +72,51 @@ There is a various way to collect the metric usage, here the complete list of th
 
 This collector gets the list of metrics for a defined period of time. This list is then stored in the system waiting to associate them with their usage find by the other collectors.
 
+#### Configuration
+
+```yaml
+metric_collector:
+  enable: true
+  prometheus_client:
+    url: "https://prometheus.demo.do.prometheus.io"
+```
+
 ### Prometheus Rule Collector
 
 This collector gets the Prometheus Rules Group using the HTTP API. Then it extracts the metric used in the alert rule or in the recording rule.
 
+#### Configuration
+
+```yaml
+rules_collector:
+  enable: true
+  prometheus_client:
+    url: "https://prometheus.demo.do.prometheus.io"
+```
+
 ### Perses Collector
 
 This collector gets the list of dashboards using the HTTP API of Perses. Then it extracts the metric used in the variables and in the different panels.
+
+#### Configuration
+
+```yaml
+perses_collector:
+  enable: true
+  http_client:
+    url: "https://demo.perses.dev"
+```
+
+### Grafana Collector
+
+This collector gets the list of dashboards using the HTTP API of Grafana. Then it extracts the metric used in the different panels. 
+Extraction from variable still needs to be done.
+
+#### Configuration
+
+```yaml
+grafana_collector:
+  enable: true
+  http_client:
+    url: "https//demo.grafana.dev"
+```

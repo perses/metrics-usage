@@ -53,7 +53,7 @@ func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
 type MetricCollector struct {
 	Enable           bool           `yaml:"enable"`
 	Period           model.Duration `yaml:"period,omitempty"`
-	PrometheusClient HTTPClient     `yaml:"prometheus_client"`
+	PrometheusClient HTTPClient     `yaml:"http_client"`
 }
 
 func (c *MetricCollector) Verify() error {
@@ -72,7 +72,7 @@ func (c *MetricCollector) Verify() error {
 type RulesCollector struct {
 	Enable           bool           `yaml:"enable"`
 	Period           model.Duration `yaml:"period,omitempty"`
-	PrometheusClient HTTPClient     `yaml:"prometheus_client"`
+	PrometheusClient HTTPClient     `yaml:"http_client"`
 }
 
 func (c *RulesCollector) Verify() error {
