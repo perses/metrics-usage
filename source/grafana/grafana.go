@@ -66,11 +66,12 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	for _, h := range hits {
-		_, getErr := c.getDashboard(h.UID)
+		dashboard, getErr := c.getDashboard(h.UID)
 		if getErr != nil {
 			logrus.WithError(getErr).Errorf("failed to get dashboard %q with UID %q", h.Title, h.UID)
 			continue
 		}
+		c.extractMetricUsage(metricUsage, dashboard)
 	}
 	if len(metricUsage) > 0 {
 		c.db.EnqueueUsage(metricUsage)
