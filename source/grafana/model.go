@@ -15,13 +15,6 @@ type row struct {
 	Panels []panel `json:"panels"`
 }
 
-type annotation struct {
-	Name  string `json:"name"`
-	Query string `json:"query"`
-	Expr  string `json:"expr"`
-	Type  string `json:"type"`
-}
-
 type templateVar struct {
 	Name  string      `json:"name"`
 	Type  string      `json:"type"`
@@ -36,7 +29,12 @@ type simplifiedDashboard struct {
 	Templating struct {
 		List []templateVar `json:"list"`
 	} `json:"templating"`
-	Annotations struct {
-		List []annotation `json:"list"`
-	} `json:"annotations"`
+}
+
+func extractTarget(panel panel) []target {
+	var targets []target
+	for _, p := range panel.Panels {
+		targets = append(targets, extractTarget(p)...)
+	}
+	return append(targets, panel.Targets...)
 }

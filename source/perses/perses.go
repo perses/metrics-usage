@@ -40,18 +40,18 @@ func NewCollector(db database.Database, cfg config.PersesCollector) (async.Simpl
 		return nil, err
 	}
 	return &persesCollector{
-		SimpleTask:   nil,
-		client:       persesClientV1.NewWithClient(restClient).Dashboard(""),
-		db:           db,
-		DashboardURL: cfg.HTTPClient.URL.String(),
+		SimpleTask: nil,
+		client:     persesClientV1.NewWithClient(restClient).Dashboard(""),
+		db:         db,
+		persesURL:  cfg.HTTPClient.URL.String(),
 	}, nil
 }
 
 type persesCollector struct {
 	async.SimpleTask
-	client       persesClientV1.DashboardInterface
-	db           database.Database
-	DashboardURL string
+	client    persesClientV1.DashboardInterface
+	db        database.Database
+	persesURL string
 }
 
 func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error {
@@ -128,7 +128,7 @@ func (c *persesCollector) extractMetricUsageFromVariables(metricUsage map[string
 }
 
 func (c *persesCollector) populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames []string, currentDashboard *v1.Dashboard) {
-	dashboardURL := fmt.Sprintf("%s/api/v1/projects/%s/dashboards/%s", c.DashboardURL, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
+	dashboardURL := fmt.Sprintf("%s/api/v1/projects/%s/dashboards/%s", c.persesURL, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
 	for _, metricName := range metricNames {
 		if usage, ok := metricUsage[metricName]; ok {
 			usage.Dashboards = utils.InsertIfNotPresent(usage.Dashboards, dashboardURL)

@@ -3,6 +3,8 @@ package grafana
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/go-openapi/strfmt"
 	grafanaapi "github.com/grafana/grafana-openapi-client-go/client"
@@ -12,7 +14,20 @@ import (
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/metrics-usage/utils"
+	"github.com/perses/metrics-usage/utils/prometheus"
 	"github.com/sirupsen/logrus"
+)
+
+var variableReplacer = strings.NewReplacer(
+	"$__interval", "5m",
+	"$interval", "5m",
+	"$resolution", "5m",
+	"$__rate_interval", "15s",
+	"$rate_interval", "15s",
+	"$__range", "1d",
+	"${__range_s:glob}", "15",
+	"${__range_s}", "15",
 )
 
 func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.SimpleTask, error) {
@@ -63,6 +78,29 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 	return nil
 }
 
+func (c *grafanaCollector) extractMetricUsage(metricUsage map[string]*modelAPIV1.MetricUsage, dashboard *simplifiedDashboard) {
+	c.extractMetricUsageFromPanels(metricUsage, dashboard.Panels, dashboard)
+	for _, r := range dashboard.Rows {
+		c.extractMetricUsageFromPanels(metricUsage, r.Panels, dashboard)
+		// TODO extract metric usage from variable
+	}
+}
+
+func (c *grafanaCollector) extractMetricUsageFromPanels(metricUsage map[string]*modelAPIV1.MetricUsage, panels []panel, dashboard *simplifiedDashboard) {
+	for _, p := range panels {
+		for _, t := range extractTarget(p) {
+			if len(t.Expr) == 0 {
+				continue
+			}
+			metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(t.Expr))
+			if err != nil {
+				logrus.WithError(err).Errorf("failed to extract metric names from PromQL expression in the panel %q for the dashboard %s/%s", p.Title, dashboard.Title, dashboard.UID)
+			}
+			c.populateUsage(metricUsage, metrics, dashboard)
+		}
+	}
+}
+
 func (c *grafanaCollector) getDashboard(uid string) (*simplifiedDashboard, error) {
 	response, err := c.client.Dashboards.GetDashboardByUID(uid)
 	if err != nil {
@@ -101,6 +139,23 @@ func (c *grafanaCollector) collectAllDashboardUID(ctx context.Context) ([]*grafa
 	return result, nil
 }
 
+func (c *grafanaCollector) populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames []string, currentDashboard *simplifiedDashboard) {
+	dashboardURL := fmt.Sprintf("%s/d/%s", c.grafanaURL, currentDashboard.UID)
+	for _, metricName := range metricNames {
+		if usage, ok := metricUsage[metricName]; ok {
+			usage.Dashboards = utils.InsertIfNotPresent(usage.Dashboards, dashboardURL)
+		} else {
+			metricUsage[metricName] = &modelAPIV1.MetricUsage{
+				Dashboards: []string{dashboardURL},
+			}
+		}
+	}
+}
+
 func (c *grafanaCollector) String() string {
 	return "grafana collector"
+}
+
+func replaceVariables(expr string) string {
+	return variableReplacer.Replace(expr)
 }
