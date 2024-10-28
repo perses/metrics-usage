@@ -74,6 +74,10 @@ This collector gets the list of metrics for a defined period of time. This list 
 
 #### Configuration
 
+See the doc for the complete configuration [here](./docs/configuration.md#metric_collector-config)
+
+Example:
+
 ```yaml
 metric_collector:
   enable: true
@@ -86,6 +90,10 @@ metric_collector:
 This collector gets the Prometheus Rules Group using the HTTP API. Then it extracts the metric used in the alert rule or in the recording rule.
 
 #### Configuration
+
+See the doc for the complete configuration [here](./docs/configuration.md#rules_collector-config)
+
+Example: 
 
 ```yaml
 rules_collector:
@@ -100,6 +108,10 @@ This collector gets the list of dashboards using the HTTP API of Perses. Then it
 
 #### Configuration
 
+See the doc for the complete configuration [here](./docs/configuration.md#perses_collector-config)
+
+Example:
+
 ```yaml
 perses_collector:
   enable: true
@@ -113,6 +125,10 @@ This collector gets the list of dashboards using the HTTP API of Grafana. Then i
 Extraction from variable still needs to be done.
 
 #### Configuration
+
+See the doc for the complete configuration [here](./docs/configuration.md#grafana_collector-config)
+
+Example:
 
 ```yaml
 grafana_collector:

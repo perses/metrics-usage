@@ -51,9 +51,9 @@ func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
 }
 
 type MetricCollector struct {
-	Enable           bool           `yaml:"enable"`
-	Period           model.Duration `yaml:"period,omitempty"`
-	PrometheusClient HTTPClient     `yaml:"http_client"`
+	Enable     bool           `yaml:"enable"`
+	Period     model.Duration `yaml:"period,omitempty"`
+	HTTPClient HTTPClient     `yaml:"http_client"`
 }
 
 func (c *MetricCollector) Verify() error {
@@ -63,16 +63,16 @@ func (c *MetricCollector) Verify() error {
 	if c.Period <= 0 {
 		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
 	}
-	if c.PrometheusClient.URL == nil {
+	if c.HTTPClient.URL == nil {
 		return fmt.Errorf("missing Prometheus URL for the metric collector")
 	}
 	return nil
 }
 
 type RulesCollector struct {
-	Enable           bool           `yaml:"enable"`
-	Period           model.Duration `yaml:"period,omitempty"`
-	PrometheusClient HTTPClient     `yaml:"http_client"`
+	Enable     bool           `yaml:"enable"`
+	Period     model.Duration `yaml:"period,omitempty"`
+	HTTPClient HTTPClient     `yaml:"http_client"`
 }
 
 func (c *RulesCollector) Verify() error {
@@ -82,7 +82,7 @@ func (c *RulesCollector) Verify() error {
 	if c.Period <= 0 {
 		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
 	}
-	if c.PrometheusClient.URL == nil {
+	if c.HTTPClient.URL == nil {
 		return fmt.Errorf("missing Prometheus URL for the rules collector")
 	}
 	return nil
@@ -111,4 +111,17 @@ type GrafanaCollector struct {
 	Enable     bool           `yaml:"enable"`
 	Period     model.Duration `yaml:"period,omitempty"`
 	HTTPClient HTTPClient     `yaml:"http_client"`
+}
+
+func (c *GrafanaCollector) Verify() error {
+	if !c.Enable {
+		return nil
+	}
+	if c.Period <= 0 {
+		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
+	}
+	if c.HTTPClient.URL == nil {
+		return fmt.Errorf("missing Rest URL for the perses collector")
+	}
+	return nil
 }

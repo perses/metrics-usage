@@ -14,7 +14,7 @@ import (
 )
 
 func NewCollector(db database.Database, cfg config.MetricCollector) (async.SimpleTask, error) {
-	promClient, err := prometheus.NewClient(cfg.PrometheusClient)
+	promClient, err := prometheus.NewClient(cfg.HTTPClient)
 	if err != nil {
 		return nil, err
 	}
