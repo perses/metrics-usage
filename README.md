@@ -122,7 +122,9 @@ perses_collector:
 ### Grafana Collector
 
 This collector gets the list of dashboards using the HTTP API of Grafana. Then it extracts the metric used in the different panels. 
-Extraction from variable still needs to be done.
+
+> [!IMPORTANT]
+> Extraction from variable still needs to be done.
 
 #### Configuration
 
