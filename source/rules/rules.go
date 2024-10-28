@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewCollector(db database.Database, cfg config.RulesCollector) (async.SimpleTask, error) {
+func NewCollector(db database.Database, cfg *config.RulesCollector) (async.SimpleTask, error) {
 	promClient, err := prometheus.NewClient(cfg.HTTPClient)
 	if err != nil {
 		return nil, err

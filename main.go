@@ -37,13 +37,14 @@ func main() {
 		runner.WithTimerTasks(time.Duration(metricCollectorConfig.Period), metricCollector)
 	}
 
-	if conf.RulesCollector.Enable {
-		rulesCollectorConfig := conf.RulesCollector
-		rulesCollector, collectorErr := rules.NewCollector(db, rulesCollectorConfig)
-		if collectorErr != nil {
-			logrus.WithError(collectorErr).Fatal("unable to create the rules collector")
+	for i, rulesCollectorConfig := range conf.RulesCollectors {
+		if rulesCollectorConfig.Enable {
+			rulesCollector, collectorErr := rules.NewCollector(db, rulesCollectorConfig)
+			if collectorErr != nil {
+				logrus.WithError(collectorErr).Fatalf("unable to create the rules collector number %d", i)
+			}
+			runner.WithTimerTasks(time.Duration(rulesCollectorConfig.Period), rulesCollector)
 		}
-		runner.WithTimerTasks(time.Duration(rulesCollectorConfig.Period), rulesCollector)
 	}
 
 	if conf.PersesCollector.Enable {

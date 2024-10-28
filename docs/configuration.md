@@ -46,7 +46,8 @@ Generic placeholders are defined as follows:
 
 ```yaml
 [ metric_collector: <Metric_Collector config> ]
-[ rules_collector: <Rule_Collector config> ]
+[ rules_collectors: 
+  - <Rule_Collector config> ]
 [ perses_collector: <Perses_Collector config> ]
 [ grafana_collector: <Grafana_Collector config> ]
 ```

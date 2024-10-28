@@ -3,10 +3,10 @@ metric_collector:
   http_client:
     url: "https://prometheus.demo.do.prometheus.io"
 
-rules_collector:
-  enable: true
-  http_client:
-    url: "https://prometheus.demo.do.prometheus.io"
+rules_collectors:
+  - enable: true
+    http_client:
+      url: "https://prometheus.demo.do.prometheus.io"
 
 perses_collector:
   enable: true

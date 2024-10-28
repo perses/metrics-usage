@@ -92,6 +92,8 @@ metric_collector:
 
 This collector gets the Prometheus Rules Group using the HTTP API. Then it extracts the metric used in the alert rule or in the recording rule.
 
+You define a set of rule collectors as we are assuming rules can com from various Prometheus / Thanos rulers.
+
 #### Configuration
 
 See the doc for the complete configuration [here](./docs/configuration.md#rules_collector-config)
@@ -99,10 +101,10 @@ See the doc for the complete configuration [here](./docs/configuration.md#rules_
 Example: 
 
 ```yaml
-rules_collector:
-  enable: true
-  prometheus_client:
-    url: "https://prometheus.demo.do.prometheus.io"
+rules_collectors:
+  - enable: true
+    prometheus_client:
+      url: "https://prometheus.demo.do.prometheus.io"
 ```
 
 ### Perses Collector
