@@ -1,6 +1,9 @@
 Metric Usage
 ============
 
+[![build](https://github.com/perses/metrics-usage/workflows/ci/badge.svg)](https://github.com/perses/metrics-usage/actions?query=workflow%3Aci)
+[![Go Report Card](https://goreportcard.com/badge/github.com/perses/metrics-usage)](https://goreportcard.com/report/github.com/perses/metrics-usage)
+
 This tool is used to analyze static files such as dashboard, Prometheus alert rules to find the usage of the Prometheus metrics.
 
 It can be useful to have an idea where the metrics are used and if they are used. Certainly, if they are not used, you shouldn't let Prometheus scrap it.
@@ -137,4 +140,44 @@ grafana_collector:
   enable: true
   http_client:
     url: "https//demo.grafana.dev"
+```
+
+## Install
+
+There are various ways of installing Metrics-Usage.
+
+### Precompiled binaries
+
+Precompiled binaries for released versions are available in
+the [GitHub release](https://github.com/perses/metrics-usage/releases). Using the latest release binary is the recommended way
+of installing Metrics-Usage.
+
+### Docker images
+
+Docker images are available on [Docker Hub](https://hub.docker.com/r/persesdev/metrics-usage).
+
+You can launch a Metrics-Usage container for trying it out with:
+
+```bash
+docker run --name metrics-usage -d -p 127.0.0.1:8080:8080 persesdev/metrics-usage
+```
+
+### Building from source
+
+To build Metrics-Usage from source code, You need:
+
+- Go [version 1.23 or greater](https://golang.org/doc/install).
+
+Start by cloning the repository:
+
+```bash
+git clone https://github.com/perses/metrics-usage.git
+cd metrics-usage
+```
+
+Then you can use `make build` that would build the web assets and then Metrics-Usage itself.
+
+```bash
+make build
+./bin/metrics-usage --config=your_config.yml
 ```
