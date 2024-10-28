@@ -9,7 +9,7 @@ require (
 	github.com/perses/common v0.26.0
 	github.com/perses/perses v0.48.1-0.20241023144629-e60322151b7e
 	github.com/prometheus/client_golang v1.20.5
-	github.com/prometheus/common v0.60.0
+	github.com/prometheus/common v0.60.1
 	github.com/prometheus/prometheus v0.55.0
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/oauth2 v0.23.0
