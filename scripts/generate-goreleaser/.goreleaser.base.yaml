@@ -29,3 +29,14 @@ archives:
     files:
       - LICENSE
       - README.md
+release:
+  github:
+    owner: "perses"
+    name: "metrics-usage"
+  ids:
+    - "default"
+  prerelease: auto
+  name_template: "{{ .Version }} / {{ .Env.DATE }}"
+
+changelog:
+  use: github
