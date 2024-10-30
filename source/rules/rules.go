@@ -7,6 +7,7 @@ import (
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/metrics-usage/pkg/client"
 	"github.com/perses/metrics-usage/utils"
 	"github.com/perses/metrics-usage/utils/prometheus"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
@@ -18,29 +19,45 @@ func NewCollector(db database.Database, cfg *config.RulesCollector) (async.Simpl
 	if err != nil {
 		return nil, err
 	}
+	var metricUsageClient client.Client
+	if cfg.MetricUsageClient != nil {
+		metricUsageClient, err = client.New(*cfg.MetricUsageClient)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &rulesCollector{
-		client:  promClient,
-		db:      db,
-		promURL: cfg.HTTPClient.URL.String(),
+		promClient:        promClient,
+		db:                db,
+		metricUsageClient: metricUsageClient,
+		promURL:           cfg.HTTPClient.URL.String(),
 	}, nil
 }
 
 type rulesCollector struct {
 	async.SimpleTask
-	client  v1.API
-	db      database.Database
-	promURL string
+	promClient        v1.API
+	db                database.Database
+	metricUsageClient client.Client
+	promURL           string
 }
 
 func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
-	result, err := c.client.Rules(ctx)
+	result, err := c.promClient.Rules(ctx)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to get rules")
 		return nil
 	}
 	metricUsage := extractMetricUsageFromRules(result.Groups, c.promURL)
 	if len(metricUsage) > 0 {
-		c.db.EnqueueUsage(metricUsage)
+		if c.metricUsageClient != nil {
+			// In this case, that means we have to send the data to a remote server.
+			if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
+				logrus.WithError(sendErr).Error("Failed to send usage metric")
+			}
+		} else {
+			c.db.EnqueueUsage(metricUsage)
+		}
 	}
 	return nil
 }

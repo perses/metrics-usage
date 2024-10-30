@@ -65,7 +65,12 @@ http_client: <HTTPClient config>
 ```yaml
 [ enable: <boolean> | default=false ]
 [ period: <duration> | default="12h" ]
-http_client: <HTTPClient config>
+  
+# It is a client to send the metrics usage to a remote metrics_usage server.
+[ metric_usage_client: <HTTPClient config> ]
+
+# The prometheus client used to retrieve the rules
+prometheus_client: <HTTPClient config>
 ```
 
 ### Perses_Collector Config
@@ -73,7 +78,11 @@ http_client: <HTTPClient config>
 ```yaml
 [ enable: <boolean> | default=false ]
 [ period: <duration> | default="12h" ]
-http_client:
+# It is a client to send the metrics usage to a remote metrics_usage server.
+[ metric_usage_client: <HTTPClient config> ]
+
+# the Perses client used to retrieve the dashboards
+perses_client:
   url: <string>
   [ tls_config: <TLS Config> ]
   auth:
@@ -89,7 +98,11 @@ http_client:
 ```yaml
 [ enable: <boolean> | default=false ]
 [ period: <duration> | default="12h" ]
-http_client: < HTTPClient config>
+# It is a client to send the metrics usage to a remote metrics_usage server.
+[ metric_usage_client: <HTTPClient config> ]
+
+# the Grafana client used to retrieve the dashboards
+grafana_client: < HTTPClient config>
 ```
 
 ### TLS Config

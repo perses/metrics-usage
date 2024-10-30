@@ -70,9 +70,11 @@ func (c *MetricCollector) Verify() error {
 }
 
 type RulesCollector struct {
-	Enable     bool           `yaml:"enable"`
-	Period     model.Duration `yaml:"period,omitempty"`
-	HTTPClient HTTPClient     `yaml:"http_client"`
+	Enable bool           `yaml:"enable"`
+	Period model.Duration `yaml:"period,omitempty"`
+	// MetricUsageClient is a client to send the metrics usage to a remote metrics_usage server.
+	MetricUsageClient *HTTPClient `yaml:"metric_usage_client,omitempty"`
+	HTTPClient        HTTPClient  `yaml:"prometheus_client"`
 }
 
 func (c *RulesCollector) Verify() error {
@@ -85,13 +87,17 @@ func (c *RulesCollector) Verify() error {
 	if c.HTTPClient.URL == nil {
 		return fmt.Errorf("missing Prometheus URL for the rules collector")
 	}
+	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
+		return fmt.Errorf("missing Metrics Usage URL for the rules collector")
+	}
 	return nil
 }
 
 type PersesCollector struct {
-	Enable     bool                    `yaml:"enable"`
-	Period     model.Duration          `yaml:"period,omitempty"`
-	HTTPClient config.RestConfigClient `yaml:"http_client"`
+	Enable            bool                    `yaml:"enable"`
+	Period            model.Duration          `yaml:"period,omitempty"`
+	MetricUsageClient *HTTPClient             `yaml:"metric_usage_client,omitempty"`
+	HTTPClient        config.RestConfigClient `yaml:"perses_client"`
 }
 
 func (c *PersesCollector) Verify() error {
@@ -104,13 +110,17 @@ func (c *PersesCollector) Verify() error {
 	if c.HTTPClient.URL == nil {
 		return fmt.Errorf("missing Rest URL for the perses collector")
 	}
+	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
+		return fmt.Errorf("missing Metrics Usage URL for the rules collector")
+	}
 	return nil
 }
 
 type GrafanaCollector struct {
-	Enable     bool           `yaml:"enable"`
-	Period     model.Duration `yaml:"period,omitempty"`
-	HTTPClient HTTPClient     `yaml:"http_client"`
+	Enable            bool           `yaml:"enable"`
+	Period            model.Duration `yaml:"period,omitempty"`
+	MetricUsageClient *HTTPClient    `yaml:"metric_usage_client,omitempty"`
+	HTTPClient        HTTPClient     `yaml:"grafana_client"`
 }
 
 func (c *GrafanaCollector) Verify() error {
@@ -122,6 +132,9 @@ func (c *GrafanaCollector) Verify() error {
 	}
 	if c.HTTPClient.URL == nil {
 		return fmt.Errorf("missing Rest URL for the perses collector")
+	}
+	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
+		return fmt.Errorf("missing Metrics Usage URL for the rules collector")
 	}
 	return nil
 }

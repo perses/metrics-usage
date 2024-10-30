@@ -14,6 +14,7 @@ import (
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/metrics-usage/pkg/client"
 	"github.com/perses/metrics-usage/utils"
 	"github.com/perses/metrics-usage/utils/prometheus"
 	"github.com/sirupsen/logrus"
@@ -36,25 +37,34 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.Simp
 	if err != nil {
 		return nil, err
 	}
+	var metricUsageClient client.Client
+	if cfg.MetricUsageClient != nil {
+		metricUsageClient, err = client.New(*cfg.MetricUsageClient)
+		if err != nil {
+			return nil, err
+		}
+	}
 	transportConfig := &grafanaapi.TransportConfig{
 		Host:     url.Host,
 		BasePath: grafanaapi.DefaultBasePath,
 		Schemes:  []string{url.Scheme},
 		Client:   httpClient,
 	}
-	client := grafanaapi.NewHTTPClientWithConfig(strfmt.Default, transportConfig)
+	grafanaClient := grafanaapi.NewHTTPClientWithConfig(strfmt.Default, transportConfig)
 	return &grafanaCollector{
-		db:         db,
-		grafanaURL: url.String(),
-		client:     client,
+		db:                db,
+		grafanaURL:        url.String(),
+		grafanaClient:     grafanaClient,
+		metricUsageClient: metricUsageClient,
 	}, nil
 }
 
 type grafanaCollector struct {
 	async.SimpleTask
-	db         database.Database
-	grafanaURL string
-	client     *grafanaapi.GrafanaHTTPAPI
+	db                database.Database
+	metricUsageClient client.Client
+	grafanaURL        string
+	grafanaClient     *grafanaapi.GrafanaHTTPAPI
 }
 
 func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
@@ -74,7 +84,14 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 		c.extractMetricUsage(metricUsage, dashboard)
 	}
 	if len(metricUsage) > 0 {
-		c.db.EnqueueUsage(metricUsage)
+		if c.metricUsageClient != nil {
+			// In this case, that means we have to send the data to a remote server.
+			if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
+				logrus.WithError(sendErr).Error("Failed to send usage metric")
+			}
+		} else {
+			c.db.EnqueueUsage(metricUsage)
+		}
 	}
 	return nil
 }
@@ -103,7 +120,7 @@ func (c *grafanaCollector) extractMetricUsageFromPanels(metricUsage map[string]*
 }
 
 func (c *grafanaCollector) getDashboard(uid string) (*simplifiedDashboard, error) {
-	response, err := c.client.Dashboards.GetDashboardByUID(uid)
+	response, err := c.grafanaClient.Dashboards.GetDashboardByUID(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +140,7 @@ func (c *grafanaCollector) collectAllDashboardUID(ctx context.Context) ([]*grafa
 	searchType := "dash-db"
 
 	for searchOk {
-		nextPageResult, err := c.client.Search.Search(&search.SearchParams{
+		nextPageResult, err := c.grafanaClient.Search.Search(&search.SearchParams{
 			Context: ctx,
 			Type:    &searchType,
 			Page:    &currentPage,

@@ -10,6 +10,7 @@ import (
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/metrics-usage/pkg/client"
 	"github.com/perses/metrics-usage/utils"
 	"github.com/perses/metrics-usage/utils/prometheus"
 	"github.com/perses/perses/go-sdk/prometheus/query"
@@ -39,23 +40,32 @@ func NewCollector(db database.Database, cfg config.PersesCollector) (async.Simpl
 	if err != nil {
 		return nil, err
 	}
+	var metricUsageClient client.Client
+	if cfg.MetricUsageClient != nil {
+		metricUsageClient, err = client.New(*cfg.MetricUsageClient)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &persesCollector{
-		SimpleTask: nil,
-		client:     persesClientV1.NewWithClient(restClient).Dashboard(""),
-		db:         db,
-		persesURL:  cfg.HTTPClient.URL.String(),
+		SimpleTask:        nil,
+		persesClient:      persesClientV1.NewWithClient(restClient).Dashboard(""),
+		db:                db,
+		metricUsageClient: metricUsageClient,
+		persesURL:         cfg.HTTPClient.URL.String(),
 	}, nil
 }
 
 type persesCollector struct {
 	async.SimpleTask
-	client    persesClientV1.DashboardInterface
-	db        database.Database
-	persesURL string
+	persesClient      persesClientV1.DashboardInterface
+	db                database.Database
+	metricUsageClient client.Client
+	persesURL         string
 }
 
 func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error {
-	dashboards, err := c.client.List("")
+	dashboards, err := c.persesClient.List("")
 	if err != nil {
 		logrus.WithError(err).Error("Failed to get dashboards")
 		return nil
@@ -68,7 +78,14 @@ func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error
 		c.extractMetricUsageFromPanels(metricUsage, dash.Spec.Panels, dash)
 	}
 	if len(metricUsage) > 0 {
-		c.db.EnqueueUsage(metricUsage)
+		if c.metricUsageClient != nil {
+			// In this case, that means we have to send the data to a remote server.
+			if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
+				logrus.WithError(sendErr).Error("Failed to send usage metric")
+			}
+		} else {
+			c.db.EnqueueUsage(metricUsage)
+		}
 	}
 	return nil
 }

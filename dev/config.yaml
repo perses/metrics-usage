@@ -5,10 +5,10 @@ metric_collector:
 
 rules_collectors:
   - enable: true
-    http_client:
+    prometheus_client:
       url: "https://prometheus.demo.do.prometheus.io"
 
 perses_collector:
   enable: true
-  http_client:
+  perses_client:
     url: "https://demo.perses.dev"
