@@ -35,6 +35,7 @@ func NewCollector(db database.Database, cfg config.MetricCollector) (async.Simpl
 		client: promClient,
 		db:     db,
 		period: cfg.Period,
+		logger: logrus.StandardLogger().WithField("collector", "metrics"),
 	}, nil
 }
 
@@ -43,6 +44,7 @@ type metricCollector struct {
 	client v1.API
 	db     database.Database
 	period model.Duration
+	logger *logrus.Entry
 }
 
 func (c *metricCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
@@ -50,7 +52,7 @@ func (c *metricCollector) Execute(ctx context.Context, _ context.CancelFunc) err
 	start := now.Add(time.Duration(-c.period))
 	labelValues, _, err := c.client.LabelValues(ctx, "__name__", nil, start, now)
 	if err != nil {
-		logrus.WithError(err).Error("failed to query metrics")
+		c.logger.WithError(err).Error("failed to query metrics")
 		return nil
 	}
 	result := make([]string, 0, len(labelValues))

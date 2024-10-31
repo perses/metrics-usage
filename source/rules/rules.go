@@ -44,6 +44,7 @@ func NewCollector(db database.Database, cfg *config.RulesCollector) (async.Simpl
 		db:                db,
 		metricUsageClient: metricUsageClient,
 		promURL:           cfg.HTTPClient.URL.String(),
+		logger:            logrus.StandardLogger().WithField("collector", "rules"),
 	}, nil
 }
 
@@ -53,12 +54,13 @@ type rulesCollector struct {
 	db                database.Database
 	metricUsageClient client.Client
 	promURL           string
+	logger            *logrus.Entry
 }
 
 func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	result, err := c.promClient.Rules(ctx)
 	if err != nil {
-		logrus.WithError(err).Error("Failed to get rules")
+		c.logger.WithError(err).Error("Failed to get rules")
 		return nil
 	}
 	metricUsage := extractMetricUsageFromRules(result.Groups, c.promURL)
@@ -66,7 +68,7 @@ func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 		if c.metricUsageClient != nil {
 			// In this case, that means we have to send the data to a remote server.
 			if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
-				logrus.WithError(sendErr).Error("Failed to send usage metric")
+				c.logger.WithError(sendErr).Error("Failed to send usage metric")
 			}
 		} else {
 			c.db.EnqueueUsage(metricUsage)

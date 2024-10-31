@@ -78,6 +78,7 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.Simp
 		grafanaURL:        url.String(),
 		grafanaClient:     grafanaClient,
 		metricUsageClient: metricUsageClient,
+		logger:            logrus.StandardLogger().WithField("collector", "grafana"),
 	}, nil
 }
 
@@ -87,29 +88,33 @@ type grafanaCollector struct {
 	metricUsageClient client.Client
 	grafanaURL        string
 	grafanaClient     *grafanaapi.GrafanaHTTPAPI
+	logger            *logrus.Entry
 }
 
 func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	hits, err := c.collectAllDashboardUID(ctx)
 	if err != nil {
-		logrus.WithError(err).Error("failed to collect dashboard UIDs")
+		c.logger.WithError(err).Error("failed to collect dashboard UIDs")
 		return nil
 	}
+	c.logger.Infof("collecting %d Grafana dashboards", len(hits))
 
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	for _, h := range hits {
 		dashboard, getErr := c.getDashboard(h.UID)
 		if getErr != nil {
-			logrus.WithError(getErr).Errorf("failed to get dashboard %q with UID %q", h.Title, h.UID)
+			c.logger.WithError(getErr).Errorf("failed to get dashboard %q with UID %q", h.Title, h.UID)
 			continue
 		}
+		c.logger.Debugf("extracting metrics for the dashboard %s with UID %q", h.Title, h.UID)
 		c.extractMetricUsage(metricUsage, dashboard)
 	}
+	c.logger.Debugf("%d metrics usage has been collected", len(metricUsage))
 	if len(metricUsage) > 0 {
 		if c.metricUsageClient != nil {
 			// In this case, that means we have to send the data to a remote server.
 			if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
-				logrus.WithError(sendErr).Error("Failed to send usage metric")
+				c.logger.WithError(sendErr).Error("Failed to send usage metric")
 			}
 		} else {
 			c.db.EnqueueUsage(metricUsage)
@@ -134,7 +139,7 @@ func (c *grafanaCollector) extractMetricUsageFromPanels(metricUsage map[string]*
 			}
 			metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(t.Expr))
 			if err != nil {
-				logrus.WithError(err).Errorf("failed to extract metric names from PromQL expression in the panel %q for the dashboard %s/%s", p.Title, dashboard.Title, dashboard.UID)
+				c.logger.WithError(err).Errorf("failed to extract metric names from PromQL expression in the panel %q for the dashboard %s/%s", p.Title, dashboard.Title, dashboard.UID)
 			}
 			c.populateUsage(metricUsage, metrics, dashboard)
 		}
@@ -148,7 +153,7 @@ func (c *grafanaCollector) extractMetricUsageFromVariables(metricUsage map[strin
 		}
 		query, err := v.extractQueryFromVariableTemplating()
 		if err != nil {
-			logrus.WithError(err).Errorf("failed to extract query in a variable")
+			c.logger.WithError(err).Errorf("failed to extract query in a variable")
 			continue
 		}
 		// label_values(query, label)
@@ -168,7 +173,7 @@ func (c *grafanaCollector) extractMetricUsageFromVariables(metricUsage map[strin
 		}
 		metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(query))
 		if err != nil {
-			logrus.WithError(err).Errorf("failed to extract metric names from PromQL expression in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID)
+			c.logger.WithError(err).Errorf("failed to extract metric names from PromQL expression in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID)
 			continue
 		}
 		c.populateUsage(metricUsage, metrics, dashboard)

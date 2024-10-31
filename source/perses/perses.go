@@ -66,6 +66,7 @@ func NewCollector(db database.Database, cfg config.PersesCollector) (async.Simpl
 		db:                db,
 		metricUsageClient: metricUsageClient,
 		persesURL:         cfg.HTTPClient.URL.String(),
+		logger:            logrus.StandardLogger().WithField("collector", "perses"),
 	}, nil
 }
 
@@ -75,12 +76,13 @@ type persesCollector struct {
 	db                database.Database
 	metricUsageClient client.Client
 	persesURL         string
+	logger            *logrus.Entry
 }
 
 func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error {
 	dashboards, err := c.persesClient.List("")
 	if err != nil {
-		logrus.WithError(err).Error("Failed to get dashboards")
+		c.logger.WithError(err).Error("Failed to get dashboards")
 		return nil
 	}
 
@@ -94,7 +96,7 @@ func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error
 		if c.metricUsageClient != nil {
 			// In this case, that means we have to send the data to a remote server.
 			if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
-				logrus.WithError(sendErr).Error("Failed to send usage metric")
+				c.logger.WithError(sendErr).Error("Failed to send usage metric")
 			}
 		} else {
 			c.db.EnqueueUsage(metricUsage)
@@ -107,21 +109,21 @@ func (c *persesCollector) extractMetricUsageFromPanels(metricUsage map[string]*m
 	for panelName, panel := range panels {
 		for i, q := range panel.Spec.Queries {
 			if q.Spec.Plugin.Kind != query.PluginKind {
-				logrus.Debugf("In panel %q, skipping query number %d, with the type %q", panelName, i, q.Spec.Plugin.Kind)
+				c.logger.Debugf("In panel %q, skipping query number %d, with the type %q", panelName, i, q.Spec.Plugin.Kind)
 				continue
 			}
 			spec, err := convertPluginSpecToTimeSeriesQuery(q.Spec.Plugin)
 			if err != nil {
-				logrus.WithError(err).Error("Failed to convert plugin spec to TimeSeriesQuery")
+				c.logger.WithError(err).Error("Failed to convert plugin spec to TimeSeriesQuery")
 				continue
 			}
 			if len(spec.Query) == 0 {
-				logrus.Debugf("No PromQL expression for the query %d in the panel %q for the dashboard '%s/%s'", i, panelName, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
+				c.logger.Debugf("No PromQL expression for the query %d in the panel %q for the dashboard '%s/%s'", i, panelName, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
 				continue
 			}
 			metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(spec.Query))
 			if err != nil {
-				logrus.WithError(err).Errorf("Failed to extract metric names from query %d in the panel %q for the dashboard '%s/%s'", i, panelName, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
+				c.logger.WithError(err).Errorf("Failed to extract metric names from query %d in the panel %q for the dashboard '%s/%s'", i, panelName, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
 				continue
 			}
 			c.populateUsage(metricUsage, metrics, currentDashboard)
@@ -136,21 +138,21 @@ func (c *persesCollector) extractMetricUsageFromVariables(metricUsage map[string
 		}
 		variableList, typeErr := v.Spec.(*dashboard.ListVariableSpec)
 		if !typeErr {
-			logrus.Errorf("variable spec is not of type ListVariableSpec but of type %T", v.Spec)
+			c.logger.Errorf("variable spec is not of type ListVariableSpec but of type %T", v.Spec)
 			continue
 		}
 		if variableList.Plugin.Kind != promql.PluginKind {
-			logrus.Debugf("skipping this variable %q as it shouldn't contain any PromQL expression", variableList.Plugin.Kind)
+			c.logger.Debugf("skipping this variable %q as it shouldn't contain any PromQL expression", variableList.Plugin.Kind)
 			continue
 		}
 		spec, err := convertPluginSpecToPromQLVariable(variableList.Plugin)
 		if err != nil {
-			logrus.WithError(err).Error("Failed to convert plugin spec to PromQL variable")
+			c.logger.WithError(err).Error("Failed to convert plugin spec to PromQL variable")
 			continue
 		}
 		metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(spec.Expr))
 		if err != nil {
-			logrus.WithError(err).Errorf("Failed to extract metric names from variable for the dashboard '%s/%s'", currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
+			c.logger.WithError(err).Errorf("Failed to extract metric names from variable for the dashboard '%s/%s'", currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
 			continue
 		}
 		c.populateUsage(metricUsage, metrics, currentDashboard)
