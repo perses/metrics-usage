@@ -13,6 +13,8 @@
 
 package grafana
 
+import "fmt"
+
 type target struct {
 	Expr string `json:"expr,omitempty"`
 }
@@ -32,6 +34,23 @@ type templateVar struct {
 	Name  string      `json:"name"`
 	Type  string      `json:"type"`
 	Query interface{} `json:"query"`
+}
+
+// extractQueryFromVariableTemplating will extract the PromQL expression from query.
+// Query can have two types.
+// It can be a string or the following JSON object:
+// { query: "up", refId: "foo" }
+// We need to ensure we are in one of the different cases.
+func (v templateVar) extractQueryFromVariableTemplating() (string, error) {
+	if query, ok := v.Query.(string); ok {
+		return query, nil
+	}
+	if queryObj, ok := v.Query.(map[string]interface{}); ok {
+		if query, ok := queryObj["query"].(string); ok {
+			return query, nil
+		}
+	}
+	return "", fmt.Errorf("query variable %q doesn't have the right type (string, or JSON object). It is of type %T", v.Name, v.Query)
 }
 
 type simplifiedDashboard struct {
