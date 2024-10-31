@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/go-openapi/strfmt"
@@ -33,15 +34,23 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var variableReplacer = strings.NewReplacer(
-	"$__interval", "5m",
-	"$interval", "5m",
-	"$resolution", "5m",
-	"$__rate_interval", "15s",
-	"$rate_interval", "15s",
-	"$__range", "1d",
-	"${__range_s:glob}", "15",
-	"${__range_s}", "15",
+var (
+	labelValuesRegexp            = regexp.MustCompile(`(?s)label_values\((.+),.+\)`)
+	labelValuesNoQueryRegexp     = regexp.MustCompile(`(?s)label_values\((.+)\)`)
+	queryResultRegexp            = regexp.MustCompile(`(?s)query_result\((.+)\)`)
+	variableRangeQueryRangeRegex = regexp.MustCompile(`\[\$?\w+?]`)
+	variableSubqueryRangeRegex   = regexp.MustCompile(`\[\$?\w+:\$?\w+?]`)
+	variableReplacer             = strings.NewReplacer(
+		"$__interval", "5m",
+		"$interval", "5m",
+		"$resolution", "5m",
+		"$__rate_interval", "15s",
+		"$rate_interval", "15s",
+		"$__range", "1d",
+		"${__range_s:glob}", "15",
+		"${__range_s}", "15",
+		"${__range_ms}", "15",
+	)
 )
 
 func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.SimpleTask, error) {
@@ -113,8 +122,8 @@ func (c *grafanaCollector) extractMetricUsage(metricUsage map[string]*modelAPIV1
 	c.extractMetricUsageFromPanels(metricUsage, dashboard.Panels, dashboard)
 	for _, r := range dashboard.Rows {
 		c.extractMetricUsageFromPanels(metricUsage, r.Panels, dashboard)
-		// TODO extract metric usage from variable
 	}
+	c.extractMetricUsageFromVariables(metricUsage, dashboard.Templating.List, dashboard)
 }
 
 func (c *grafanaCollector) extractMetricUsageFromPanels(metricUsage map[string]*modelAPIV1.MetricUsage, panels []panel, dashboard *simplifiedDashboard) {
@@ -129,6 +138,40 @@ func (c *grafanaCollector) extractMetricUsageFromPanels(metricUsage map[string]*
 			}
 			c.populateUsage(metricUsage, metrics, dashboard)
 		}
+	}
+}
+
+func (c *grafanaCollector) extractMetricUsageFromVariables(metricUsage map[string]*modelAPIV1.MetricUsage, variables []templateVar, dashboard *simplifiedDashboard) {
+	for _, v := range variables {
+		if v.Type != "query" {
+			continue
+		}
+		query, err := v.extractQueryFromVariableTemplating()
+		if err != nil {
+			logrus.WithError(err).Errorf("failed to extract query in a variable")
+			continue
+		}
+		// label_values(query, label)
+		if labelValuesRegexp.MatchString(query) {
+			sm := labelValuesRegexp.FindStringSubmatch(query)
+			if len(sm) > 0 {
+				query = sm[1]
+			} else {
+				continue
+			}
+		} else if labelValuesNoQueryRegexp.MatchString(query) {
+			// No query so no metric.
+			continue
+		} else if queryResultRegexp.MatchString(query) {
+			// query_result(query)
+			query = queryResultRegexp.FindStringSubmatch(query)[1]
+		}
+		metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(query))
+		if err != nil {
+			logrus.WithError(err).Errorf("failed to extract metric names from PromQL expression in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID)
+			continue
+		}
+		c.populateUsage(metricUsage, metrics, dashboard)
 	}
 }
 
@@ -188,5 +231,8 @@ func (c *grafanaCollector) String() string {
 }
 
 func replaceVariables(expr string) string {
-	return variableReplacer.Replace(expr)
+	newExpr := variableReplacer.Replace(expr)
+	newExpr = variableRangeQueryRangeRegex.ReplaceAllLiteralString(newExpr, `[5m]`)
+	newExpr = variableSubqueryRangeRegex.ReplaceAllLiteralString(newExpr, `[5m:1m]`)
+	return newExpr
 }
