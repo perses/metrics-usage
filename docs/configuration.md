@@ -133,7 +133,27 @@ grafana_client: < HTTPClient config>
 ```yaml
 url: <string>
 [ oauth: < Oauth Config> ]
+[ basic_auth: <BasicAuth Config> ]
+[ authorization: <Authorization Config> ]
 [ tls_config: < TLS Config> ]
+```
+
+### BasicAuth config
+
+```yaml
+username: <string>
+[ password: <string> ]
+[ passwordFile: <filename> ]
+```
+
+### Authorization Config
+
+```yaml
+[ type: <string> | default = "Bearer" ]
+
+  # The HTTP credentials like a Bearer token
+[ credentials: <string> ]
+[ credentialsFile: <filename> ]
 ```
 
 ### Oauth Config

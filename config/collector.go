@@ -15,6 +15,7 @@ package config
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"time"
@@ -33,9 +34,11 @@ const (
 )
 
 type HTTPClient struct {
-	URL       *common.URL       `yaml:"url"`
-	Oauth     *config.Oauth     `yaml:"oauth,omitempty"`
-	TLSConfig *secret.TLSConfig `yaml:"tls_config,omitempty"`
+	URL           *common.URL           `yaml:"url"`
+	Oauth         *config.Oauth         `yaml:"oauth,omitempty"`
+	BasicAuth     *secret.BasicAuth     `yaml:"basic_auth,omitempty"`
+	Authorization *secret.Authorization `yaml:"authorization,omitempty"`
+	TLSConfig     *secret.TLSConfig     `yaml:"tls_config,omitempty"`
 }
 
 func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
@@ -43,6 +46,10 @@ func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, &http.Client{
+		Transport: roundTripper,
+		Timeout:   connectionTimeout,
+	})
 	if cfg.Oauth != nil {
 		oauthConfig := &clientcredentials.Config{
 			ClientID:     cfg.Oauth.ClientID,
@@ -51,11 +58,29 @@ func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
 			Scopes:       cfg.Oauth.Scopes,
 			AuthStyle:    cfg.Oauth.AuthStyle,
 		}
-		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, &http.Client{
-			Transport: roundTripper,
-			Timeout:   connectionTimeout,
-		})
 		return oauthConfig.Client(ctx), nil
+	}
+	if cfg.BasicAuth != nil {
+		c := oauth2.Config{}
+		password, getPasswordErr := cfg.BasicAuth.GetPassword()
+		if getPasswordErr != nil {
+			return nil, getPasswordErr
+		}
+		return c.Client(ctx, &oauth2.Token{
+			AccessToken: base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", cfg.BasicAuth.Username, password))),
+			TokenType:   "basic",
+		}), nil
+	}
+	if cfg.Authorization != nil {
+		c := oauth2.Config{}
+		credential, getCredentialErr := cfg.Authorization.GetCredentials()
+		if getCredentialErr != nil {
+			return nil, getCredentialErr
+		}
+		return c.Client(ctx, &oauth2.Token{
+			AccessToken: credential,
+			TokenType:   cfg.Authorization.Type,
+		}), nil
 	}
 	return &http.Client{
 		Transport: roundTripper,
