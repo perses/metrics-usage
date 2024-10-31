@@ -143,12 +143,9 @@ func (d *db) watchUsageQueue() {
 func (d *db) flush(period time.Duration) {
 	ticker := time.NewTicker(period)
 	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			if err := d.writeMetricsInJSONFile(); err != nil {
-				logrus.WithError(err).Error("unable to flush the data in the file")
-			}
+	for range ticker.C {
+		if err := d.writeMetricsInJSONFile(); err != nil {
+			logrus.WithError(err).Error("unable to flush the data in the file")
 		}
 	}
 }
