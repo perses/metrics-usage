@@ -13,9 +13,44 @@
 
 package config
 
-import "github.com/perses/common/config"
+import (
+	"fmt"
+	"time"
+
+	"github.com/perses/common/config"
+	"github.com/prometheus/common/model"
+)
+
+const defaultFlushPeriod = time.Minute * 5
+
+type Database struct {
+	// Define if the database is stored in a file or in memory
+	InMemory *bool `yaml:"in_memory,omitempty"`
+	// In case the database is stored in a file, then the path to a JSON file must be defined
+	Path string `yaml:"path,omitempty"`
+	// FlushPeriod defines the frequency the system will flush the data into the JSON file
+	FlushPeriod model.Duration `yaml:"flush_period,omitempty"`
+}
+
+func (d *Database) Verify() error {
+	var inMemory = true
+	if d.InMemory == nil {
+		d.InMemory = &inMemory
+	}
+	if *d.InMemory {
+		return nil
+	}
+	if len(d.Path) == 0 {
+		return fmt.Errorf("database path is required")
+	}
+	if d.FlushPeriod == 0 {
+		d.FlushPeriod = model.Duration(defaultFlushPeriod)
+	}
+	return nil
+}
 
 type Config struct {
+	Database         Database          `yaml:"database"`
 	MetricCollector  MetricCollector   `yaml:"metric_collector,omitempty"`
 	RulesCollectors  []*RulesCollector `yaml:"rules_collectors,omitempty"`
 	PersesCollector  PersesCollector   `yaml:"perses_collector,omitempty"`

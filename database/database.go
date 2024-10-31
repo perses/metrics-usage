@@ -14,8 +14,12 @@
 package database
 
 import (
+	"encoding/json"
+	"os"
 	"sync"
+	"time"
 
+	"github.com/perses/metrics-usage/config"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/sirupsen/logrus"
 )
@@ -27,17 +31,23 @@ type Database interface {
 	EnqueueUsage(usages map[string]*v1.MetricUsage)
 }
 
-func New() Database {
+func New(cfg config.Database) Database {
 	d := &db{
-		Database:     nil,
 		metrics:      make(map[string]*v1.Metric),
 		usage:        make(map[string]*v1.MetricUsage),
 		usageQueue:   make(chan map[string]*v1.MetricUsage, 250),
 		metricsQueue: make(chan []string, 10),
+		path:         cfg.Path,
 	}
 
 	go d.watchUsageQueue()
 	go d.watchMetricsQueue()
+	if !*cfg.InMemory {
+		if err := d.readMetricsInJSONFile(); err != nil {
+			logrus.WithError(err).Warning("failed to read metrics file")
+		}
+		go d.flush(time.Duration(cfg.FlushPeriod))
+	}
 	return d
 }
 
@@ -55,6 +65,9 @@ type db struct {
 	// There will be no other way to write in it.
 	// Doing that allows us to accept more HTTP requests to write data and to delay the actual writing.
 	usageQueue chan map[string]*v1.MetricUsage
+	// path is the path to the JSON file where metrics is flushed periodically
+	// It is empty if the database is purely in memory.
+	path string
 	// We are expecting to spend more time to write data than actually read.
 	// Which result having too many writers,
 	// and so unable to read the data because the lock queue is too long to be able to access to the data.
@@ -125,6 +138,37 @@ func (d *db) watchUsageQueue() {
 		}
 		d.mutex.Unlock()
 	}
+}
+
+func (d *db) flush(period time.Duration) {
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if err := d.writeMetricsInJSONFile(); err != nil {
+				logrus.WithError(err).Error("unable to flush the data in the file")
+			}
+		}
+	}
+}
+
+func (d *db) writeMetricsInJSONFile() error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	data, err := json.Marshal(d.metrics)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(d.path, data, 0644)
+}
+
+func (d *db) readMetricsInJSONFile() error {
+	data, err := os.ReadFile(d.path)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(data, &d.metrics)
 }
 
 func mergeUsage(old, new *v1.MetricUsage) *v1.MetricUsage {

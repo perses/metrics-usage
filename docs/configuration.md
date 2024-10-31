@@ -45,11 +45,25 @@ Generic placeholders are defined as follows:
 * `<string>`: a regular string
 
 ```yaml
+[ database: <Database Config> ]
 [ metric_collector: <Metric_Collector config> ]
 [ rules_collectors: 
   - <Rule_Collector config> ]
 [ perses_collector: <Perses_Collector config> ]
 [ grafana_collector: <Grafana_Collector config> ]
+```
+
+### Database Config
+
+```yaml
+# it defines if the database is stored in a file or in memory
+[ in_memory: <boolean> | default = true ]
+
+# In case the database is stored in a file, then the path to a JSON file must be defined
+[ path: <path> ]
+
+# It defines the frequency the system will flush the data into the JSON file
+[ flush_period: <duration> | default = 5m ]
 ```
 
 ### Metric_Collector Config

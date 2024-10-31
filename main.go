@@ -38,7 +38,7 @@ func main() {
 		logrus.WithError(err).Fatalf("error reading configuration from file %q or from environment", *configFile)
 	}
 
-	db := database.New()
+	db := database.New(conf.Database)
 	runner := app.NewRunner().WithDefaultHTTPServer("metrics_usage")
 
 	if conf.MetricCollector.Enable {
