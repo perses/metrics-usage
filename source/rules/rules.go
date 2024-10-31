@@ -93,9 +93,10 @@ func extractMetricUsageFromRules(ruleGroups []v1.RuleGroup, source string) map[s
 				populateUsage(metricUsage,
 					metricNames,
 					modelAPIV1.RuleUsage{
-						PromLink:  source,
-						GroupName: ruleGroup.Name,
-						Name:      v.Name,
+						PromLink:   source,
+						GroupName:  ruleGroup.Name,
+						Name:       v.Name,
+						Expression: v.Query,
 					},
 					false,
 				)
@@ -108,9 +109,10 @@ func extractMetricUsageFromRules(ruleGroups []v1.RuleGroup, source string) map[s
 				populateUsage(metricUsage,
 					metricNames,
 					modelAPIV1.RuleUsage{
-						PromLink:  source,
-						GroupName: ruleGroup.Name,
-						Name:      v.Name,
+						PromLink:   source,
+						GroupName:  ruleGroup.Name,
+						Name:       v.Name,
+						Expression: v.Query,
 					},
 					true,
 				)

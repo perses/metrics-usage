@@ -192,16 +192,16 @@ func mergeSlice[T comparable](old, new []T) []T {
 	if len(new) == 0 {
 		return old
 	}
-	for _, oldDashboard := range old {
+	for _, a := range old {
 		found := false
-		for _, newDashboard := range new {
-			if oldDashboard == newDashboard {
+		for _, b := range new {
+			if a == b {
 				found = true
 				break
 			}
 		}
 		if !found {
-			new = append(new, oldDashboard)
+			new = append(new, a)
 		}
 	}
 	return new

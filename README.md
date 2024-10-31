@@ -24,24 +24,28 @@ This tool provides an API that can be used to get the usage for each metrics col
         {
           "prom_link": "https://prometheus.demo.do.prometheus.io",
           "group_name": "node-exporter.rules",
-          "name": "instance:node_num_cpu:sum"
+          "name": "instance:node_num_cpu:sum",
+          "expression": "count without (cpu, mode) (node_cpu_seconds_total{job=\"node\",mode=\"idle\"})"
         },
         {
           "prom_link": "https://prometheus.demo.do.prometheus.io",
           "group_name": "node-exporter.rules",
-          "name": "instance:node_cpu_utilisation:rate5m"
+          "name": "instance:node_cpu_utilisation:rate5m",
+          "expression": "1 - avg without (cpu) (sum without (mode) (rate(node_cpu_seconds_total{job=\"node\",mode=~\"idle|iowait|steal\"}[5m])))"
         }
       ],
       "alertRules": [
         {
           "prom_link": "https://prometheus.demo.do.prometheus.io",
           "group_name": "node-exporter",
-          "name": "NodeCPUHighUsage"
+          "name": "NodeCPUHighUsage",
+          "expression": "sum without (mode) (avg without (cpu) (rate(node_cpu_seconds_total{job=\"node\",mode!=\"idle\"}[2m]))) * 100 > 90"
         },
         {
           "prom_link": "https://prometheus.demo.do.prometheus.io",
           "group_name": "node-exporter",
-          "name": "NodeSystemSaturation"
+          "name": "NodeSystemSaturation",
+          "expression": "node_load1{job=\"node\"} / count without (cpu, mode) (node_cpu_seconds_total{job=\"node\",mode=\"idle\"}) > 2"
         }
       ]
     }
@@ -52,7 +56,8 @@ This tool provides an API that can be used to get the usage for each metrics col
         {
           "prom_link": "https://prometheus.demo.do.prometheus.io",
           "group_name": "ansible managed alert rules",
-          "name": "NodeCPUUtilizationHigh"
+          "name": "NodeCPUUtilizationHigh",
+          "expression": "instance:node_cpu_utilisation:rate5m * 100 > ignoring (severity) node_cpu_utilization_percent_threshold{severity=\"critical\"}"
         }
       ]
     }

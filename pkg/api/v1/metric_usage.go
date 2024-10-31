@@ -14,9 +14,10 @@
 package v1
 
 type RuleUsage struct {
-	PromLink  string `json:"prom_link"`
-	GroupName string `json:"group_name"`
-	Name      string `json:"name"`
+	PromLink   string `json:"prom_link"`
+	GroupName  string `json:"group_name"`
+	Name       string `json:"name"`
+	Expression string `json:"expression"`
 }
 
 type MetricUsage struct {
