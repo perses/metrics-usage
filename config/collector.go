@@ -112,7 +112,10 @@ type RulesCollector struct {
 	Period model.Duration `yaml:"period,omitempty"`
 	// MetricUsageClient is a client to send the metrics usage to a remote metrics_usage server.
 	MetricUsageClient *HTTPClient `yaml:"metric_usage_client,omitempty"`
-	HTTPClient        HTTPClient  `yaml:"prometheus_client"`
+	// RetryToGetRules is the number of retries the collector will do to get the rules from Prometheus before actually failing.
+	// Between each retry, the collector will wait first 10 seconds, then 20 seconds, then 30 seconds ...etc.
+	RetryToGetRules uint       `yaml:"retry_to_get_rules,omitempty"`
+	HTTPClient      HTTPClient `yaml:"prometheus_client"`
 }
 
 func (c *RulesCollector) Verify() error {
@@ -121,6 +124,9 @@ func (c *RulesCollector) Verify() error {
 	}
 	if c.Period <= 0 {
 		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
+	}
+	if c.RetryToGetRules == 0 {
+		c.RetryToGetRules = 3
 	}
 	if c.HTTPClient.URL == nil {
 		return fmt.Errorf("missing Prometheus URL for the rules collector")

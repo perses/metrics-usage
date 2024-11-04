@@ -83,6 +83,10 @@ http_client: <HTTPClient config>
 # It is a client to send the metrics usage to a remote metrics_usage server.
 [ metric_usage_client: <HTTPClient config> ]
 
+# It is the number of retries the collector will do to get the rules from Prometheus before actually failing.
+# Between each retry, the collector will wait first 10 seconds, then 20 seconds, then 30 seconds ...etc.
+[ retry_to_get_rules: <number> | default=3 ]
+
 # The prometheus client used to retrieve the rules
 prometheus_client: <HTTPClient config>
 ```

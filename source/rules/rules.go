@@ -15,6 +15,7 @@ package rules
 
 import (
 	"context"
+	"time"
 
 	"github.com/perses/common/async"
 	"github.com/perses/metrics-usage/config"
@@ -45,6 +46,7 @@ func NewCollector(db database.Database, cfg *config.RulesCollector) (async.Simpl
 		metricUsageClient: metricUsageClient,
 		promURL:           cfg.HTTPClient.URL.String(),
 		logger:            logrus.StandardLogger().WithField("collector", "rules"),
+		retry:             cfg.RetryToGetRules,
 	}, nil
 }
 
@@ -55,10 +57,11 @@ type rulesCollector struct {
 	metricUsageClient client.Client
 	promURL           string
 	logger            *logrus.Entry
+	retry             uint
 }
 
 func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
-	result, err := c.promClient.Rules(ctx)
+	result, err := c.getRules(ctx)
 	if err != nil {
 		c.logger.WithError(err).Error("Failed to get rules")
 		return nil
@@ -79,6 +82,28 @@ func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 
 func (c *rulesCollector) String() string {
 	return "rules collector"
+}
+
+func (c *rulesCollector) getRules(ctx context.Context) (v1.RulesResult, error) {
+	waitDuration := 10 * time.Second
+	retry := c.retry
+	doRetry := true
+	var err error
+	var result v1.RulesResult
+	for doRetry && retry > 0 {
+		result, err = c.promClient.Rules(ctx)
+		if err != nil {
+			doRetry = true
+			retry--
+			c.logger.WithError(err).Debug("Failed to get rules, retrying...")
+			time.Sleep(waitDuration)
+			waitDuration = waitDuration + 10*time.Second
+		} else {
+			c.logger.Infof("successfuly get the rules")
+			doRetry = false
+		}
+	}
+	return result, err
 }
 
 func extractMetricUsageFromRules(ruleGroups []v1.RuleGroup, source string) map[string]*modelAPIV1.MetricUsage {
