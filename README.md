@@ -72,6 +72,23 @@ This tool provides an API that can be used to get the usage for each metrics col
 }
 ```
 
+## How to use it
+
+### Central Usage
+
+Metrics Usage can be used as a central way. That means you have a stateful instance that will pull the data from every source.
+
+![Architecture overview](docs/architecture/central_architecture_usage.svg)
+
+### Using sidecar container for the rules
+
+Pulling the various rules through a central Thanos can ended up to fail because there are too many. 
+And listing every Thanos Ruler or every Prometheus is horrible to maintain, 
+that's why we are offering a way to use metrics_usage as a sidecar container. 
+Like that, you can configure it to push the data to a central instance.
+
+![Architecture overview](docs/architecture/sidecar_rules_usage.svg)
+
 ## Available Collectors
 
 There is a various way to collect the metric usage, here the complete list of the available collectors:
@@ -125,7 +142,7 @@ Example:
 ```yaml
 perses_collector:
   enable: true
-  http_client:
+  perses_client:
     url: "https://demo.perses.dev"
 ```
 
@@ -142,7 +159,7 @@ Example:
 ```yaml
 grafana_collector:
   enable: true
-  http_client:
+  grafana_client:
     url: "https//demo.grafana.dev"
 ```
 
