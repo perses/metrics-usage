@@ -35,7 +35,7 @@ const (
 
 type HTTPClient struct {
 	URL           *common.URL           `yaml:"url"`
-	Oauth         *config.Oauth         `yaml:"oauth,omitempty"`
+	OAuth         *config.OAuth         `yaml:"oauth,omitempty"`
 	BasicAuth     *secret.BasicAuth     `yaml:"basic_auth,omitempty"`
 	Authorization *secret.Authorization `yaml:"authorization,omitempty"`
 	TLSConfig     *secret.TLSConfig     `yaml:"tls_config,omitempty"`
@@ -50,13 +50,13 @@ func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
 		Transport: roundTripper,
 		Timeout:   connectionTimeout,
 	})
-	if cfg.Oauth != nil {
+	if cfg.OAuth != nil {
 		oauthConfig := &clientcredentials.Config{
-			ClientID:     cfg.Oauth.ClientID,
-			ClientSecret: cfg.Oauth.ClientSecret,
-			TokenURL:     cfg.Oauth.TokenURL,
-			Scopes:       cfg.Oauth.Scopes,
-			AuthStyle:    cfg.Oauth.AuthStyle,
+			ClientID:     cfg.OAuth.ClientID,
+			ClientSecret: cfg.OAuth.ClientSecret,
+			TokenURL:     cfg.OAuth.TokenURL,
+			Scopes:       cfg.OAuth.Scopes,
+			AuthStyle:    cfg.OAuth.AuthStyle,
 		}
 		return oauthConfig.Client(ctx), nil
 	}

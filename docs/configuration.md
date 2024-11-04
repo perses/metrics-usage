@@ -100,15 +100,7 @@ prometheus_client: <HTTPClient config>
 [ metric_usage_client: <HTTPClient config> ]
 
 # the Perses client used to retrieve the dashboards
-perses_client:
-  url: <string>
-  [ tls_config: <TLS Config> ]
-  auth:
-    basic_auth:
-      username: <string>
-      [ password: <string> ]
-      [ password_file: <string> ]
-    [ oauth: < Oauth Config> ]
+perses_client: <HTTPClient config>
 ```
 
 ### Grafana_Collector Config
@@ -150,10 +142,10 @@ grafana_client: < HTTPClient config>
 
 ```yaml
 url: <string>
-[ oauth: < Oauth Config> ]
+[ oauth: <Oauth Config> ]
 [ basic_auth: <BasicAuth Config> ]
 [ authorization: <Authorization Config> ]
-[ tls_config: < TLS Config> ]
+[ tls_config: <TLS Config> ]
 ```
 
 ### BasicAuth config

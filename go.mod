@@ -4,10 +4,10 @@ go 1.23.1
 
 require (
 	github.com/go-openapi/strfmt v0.23.0
-	github.com/grafana/grafana-openapi-client-go v0.0.0-20241018134006-9d96c2007bd8
+	github.com/grafana/grafana-openapi-client-go v0.0.0-20241101140420-bc381928ae6e
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/perses/common v0.26.0
-	github.com/perses/perses v0.48.1-0.20241023144629-e60322151b7e
+	github.com/perses/perses v0.49.0-rc.1.0.20241104091321-0a0482386006
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.1
 	github.com/prometheus/prometheus v0.55.0
@@ -103,7 +103,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	github.com/zitadel/oidc/v3 v3.30.1 // indirect
+	github.com/zitadel/oidc/v3 v3.31.0 // indirect
 	github.com/zitadel/schema v1.3.0 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7 // indirect
 	go.mongodb.org/mongo-driver v1.14.0 // indirect
