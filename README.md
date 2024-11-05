@@ -1,14 +1,14 @@
-Metric Usage
+Metrics Usage
 ============
 
 [![build](https://github.com/perses/metrics-usage/workflows/ci/badge.svg)](https://github.com/perses/metrics-usage/actions?query=workflow%3Aci)
 [![Go Report Card](https://goreportcard.com/badge/github.com/perses/metrics-usage)](https://goreportcard.com/report/github.com/perses/metrics-usage)
 
-This tool is used to analyze static files such as dashboard, Prometheus alert rules to find the usage of the Prometheus metrics.
+This tool analyzes static files - like dashboards and Prometheus alert rules - to track where and how Prometheus metrics are used.
 
-It can be useful to have an idea where the metrics are used and if they are used. Certainly, if they are not used, you shouldn't let Prometheus scrap it.
+It’s especially helpful for identifying whether metrics are actively used. Unused metrics should ideally not be scraped by Prometheus to avoid unnecessary load.
 
-This tool provides an API that can be used to get the usage for each metrics collected. Requesting `/api/v1/metrics` will give you something like that:
+The tool also provides an API endpoint, `/api/v1/metrics`, which returns the usage data for each collected metric as shown below:
 
 ```json
 {
@@ -91,7 +91,7 @@ Like that, you can configure it to push the data to a central instance.
 
 ## Available Collectors
 
-There is a various way to collect the metric usage, here the complete list of the available collectors:
+There is a various way to collect the metrics usage, here the complete list of the available collectors:
 
 ### Prometheus Metric Collector
 
