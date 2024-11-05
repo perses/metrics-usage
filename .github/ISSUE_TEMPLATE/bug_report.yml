@@ -1,0 +1,51 @@
+---
+name: Bug report
+description: Create a report to help us improve.
+labels: [ "bug" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for opening a bug report for MetricUsage.
+
+        Please do *NOT* ask support questions in Github issues.
+
+        If your issue is not a feature request or bug report contact us directly on slack.
+  - type: textarea
+    attributes:
+      label: What did you do?
+      description: Please provide steps for us to reproduce this issue.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: What did you expect to see?
+  - type: textarea
+    attributes:
+      label: What did you see instead? Under which circumstances?
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## Environment
+  - type: input
+    attributes:
+      label: System information
+      description: insert output of `uname -srm` here, or operating system version
+      placeholder: e.g. Linux 5.16.15 x86_64
+  - type: input
+    attributes:
+      label: MetricsUsage version
+      description: Insert the MetricsUsage version here.
+      placeholder: e.g. 0.3.0
+  - type: textarea
+    attributes:
+      label: MetricsUsage configuration file
+      description: Insert relevant configuration here. Don't forget to remove secrets.
+      render: yaml
+  - type: textarea
+    attributes:
+      label: Logs
+      description: Insert MetricsUsage logs relevant to the issue here.
+      render: text
