@@ -8,7 +8,7 @@ This tool analyzes static files - like dashboards and Prometheus alert rules - t
 
 It’s especially helpful for identifying whether metrics are actively used. Unused metrics should ideally not be scraped by Prometheus to avoid unnecessary load.
 
-The tool also provides an API endpoint, `/api/v1/metrics`, which returns the usage data for each collected metric as shown below:
+The tool provides an API endpoint, `/api/v1/metrics`, which returns the usage data for each collected metric as shown below:
 
 ```json
 {
