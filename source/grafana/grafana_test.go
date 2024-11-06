@@ -25,9 +25,14 @@ func TestExtractMetrics(t *testing.T) {
 		resultErrs    []logError
 	}{
 		{
-			name:          "d1",
+			name:          "from/to variables",
 			dashboardFile: "tests/d1.json",
 			resultMetrics: []string{"run", "service_color"},
+		},
+		{
+			name:          "loading runtime variable",
+			dashboardFile: "tests/d2.json",
+			resultMetrics: []string{"gacms_svc_elapsed_time_seconds_bucket"},
 		},
 	}
 	for _, tt := range tests {

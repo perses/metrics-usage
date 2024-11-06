@@ -30,10 +30,15 @@ type row struct {
 	Panels []panel `json:"panels"`
 }
 
+type option struct {
+	Value string `json:"value"`
+}
+
 type templateVar struct {
-	Name  string      `json:"name"`
-	Type  string      `json:"type"`
-	Query interface{} `json:"query"`
+	Name    string      `json:"name"`
+	Type    string      `json:"type"`
+	Query   interface{} `json:"query"`
+	Options []option    `json:"options"`
 }
 
 // extractQueryFromVariableTemplating will extract the PromQL expression from query.

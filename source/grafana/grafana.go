@@ -67,7 +67,7 @@ var (
 		"__name":              "john",
 		"__dashboard":         "the_infamous_one",
 	}
-	variableReplacer = strings.NewReplacer(generateGrafanaVariableSyntaxReplacer()...)
+	variableReplacer = strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(globalVariableList)...)
 )
 
 func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.SimpleTask, error) {
@@ -133,7 +133,7 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 			c.logger.WithError(extractError.err).Error(extractError.msg)
 		}
 		metricUsage := c.generateUsage(metrics, dashboard)
-		c.logger.Debugf("%d metrics usage has been collected for the dashboard %q with UID %q", len(metricUsage), h.Title, h.UID)
+		c.logger.Infof("%d metrics usage has been collected for the dashboard %q with UID %q", len(metricUsage), h.Title, h.UID)
 		if len(metricUsage) > 0 {
 			if c.metricUsageClient != nil {
 				// In this case, that means we have to send the data to a remote server.
@@ -205,33 +205,35 @@ func (c *grafanaCollector) String() string {
 	return "grafana collector"
 }
 
-func replaceVariables(expr string) string {
-	newExpr := variableReplacer.Replace(expr)
+func replaceVariables(expr string, staticVariables *strings.Replacer) string {
+	newExpr := staticVariables.Replace(expr)
+	newExpr = variableReplacer.Replace(newExpr)
 	newExpr = variableRangeQueryRangeRegex.ReplaceAllLiteralString(newExpr, `[5m]`)
 	newExpr = variableSubqueryRangeRegex.ReplaceAllLiteralString(newExpr, `[5m:1m]`)
 	return newExpr
 }
 
-func generateGrafanaVariableSyntaxReplacer() []string {
+func generateGrafanaVariableSyntaxReplacer(variables map[string]string) []string {
 	var result []string
-	for variable, value := range globalVariableList {
+	for variable, value := range variables {
 		result = append(result, fmt.Sprintf("$%s", variable), value, fmt.Sprintf("${%s}", variable), value)
 	}
 	return result
 }
 
 func extractMetrics(dashboard *simplifiedDashboard) ([]string, []logError) {
-	m1, err1 := extractMetricsFromPanels(dashboard.Panels, dashboard)
+	staticVariables := strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(extractStaticVariables(dashboard.Templating.List))...)
+	m1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, dashboard)
 	for _, r := range dashboard.Rows {
-		m2, err2 := extractMetricsFromPanels(r.Panels, dashboard)
+		m2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, dashboard)
 		m1 = utils.Merge(m1, m2)
 		err1 = append(err1, err2...)
 	}
-	m3, err3 := extractMetricsFromVariables(dashboard.Templating.List, dashboard)
+	m3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, dashboard)
 	return utils.Merge(m1, m3), append(err1, err3...)
 }
 
-func extractMetricsFromPanels(panels []panel, dashboard *simplifiedDashboard) ([]string, []logError) {
+func extractMetricsFromPanels(panels []panel, staticVariables *strings.Replacer, dashboard *simplifiedDashboard) ([]string, []logError) {
 	var errs []logError
 	var result []string
 	for _, p := range panels {
@@ -239,7 +241,7 @@ func extractMetricsFromPanels(panels []panel, dashboard *simplifiedDashboard) ([
 			if len(t.Expr) == 0 {
 				continue
 			}
-			metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(t.Expr))
+			metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(t.Expr, staticVariables))
 			if err != nil {
 				errs = append(errs, logError{
 					err: err,
@@ -253,7 +255,7 @@ func extractMetricsFromPanels(panels []panel, dashboard *simplifiedDashboard) ([
 	return result, errs
 }
 
-func extractMetricsFromVariables(variables []templateVar, dashboard *simplifiedDashboard) ([]string, []logError) {
+func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, dashboard *simplifiedDashboard) ([]string, []logError) {
 	var errs []logError
 	var result []string
 	for _, v := range variables {
@@ -283,7 +285,7 @@ func extractMetricsFromVariables(variables []templateVar, dashboard *simplifiedD
 			// query_result(query)
 			query = queryResultRegexp.FindStringSubmatch(query)[1]
 		}
-		metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(query))
+		metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(query, staticVariables))
 		if err != nil {
 			errs = append(errs, logError{
 				err: err,
@@ -294,4 +296,18 @@ func extractMetricsFromVariables(variables []templateVar, dashboard *simplifiedD
 		}
 	}
 	return result, errs
+}
+
+func extractStaticVariables(variables []templateVar) map[string]string {
+	result := make(map[string]string)
+	for _, v := range variables {
+		if v.Type == "query" {
+			// We don't want to look at the runtime query. We are using them to extract metrics instead.
+			continue
+		}
+		if len(v.Options) > 0 {
+			result[v.Name] = v.Options[0].Value
+		}
+	}
+	return result
 }
