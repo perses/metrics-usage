@@ -34,40 +34,126 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type variableTuple struct {
+	name  string
+	value string
+}
+
 var (
 	labelValuesRegexp            = regexp.MustCompile(`(?s)label_values\((.+),.+\)`)
 	labelValuesNoQueryRegexp     = regexp.MustCompile(`(?s)label_values\((.+)\)`)
 	queryResultRegexp            = regexp.MustCompile(`(?s)query_result\((.+)\)`)
 	variableRangeQueryRangeRegex = regexp.MustCompile(`\[\$?\w+?]`)
 	variableSubqueryRangeRegex   = regexp.MustCompile(`\[\$?\w+:\$?\w+?]`)
-	globalVariableList           = map[string]string{
-		"__interval":          "20m",
-		"interval":            "20m",
-		"__interval_ms":       "1200000",
-		"resolution":          "5m",
-		"__rate_interval":     "20m",
-		"rate_interval":       "20m",
-		"__rate_interval_ms":  "1200000",
-		"__range":             "1d",
-		"__range_s:glob":      "15",
-		"__range_s":           "15",
-		"__range_ms":          "15",
-		"__from":              "1594671549254",
-		"__from:date":         "2020-07-13T20:19:09.254Z",
-		"__from:date:iso":     "2020-07-13T20:19:09.254Z",
-		"__from:date:seconds": "1594671549",
-		"__from:date:YYYY-MM": "2020-07",
-		"__to":                "1594671549254",
-		"__to:date":           "2020-07-13T20:19:09.254Z",
-		"__to:date:iso":       "2020-07-13T20:19:09.254Z",
-		"__to:date:seconds":   "1594671549",
-		"__to:date:YYYY-MM":   "2020-07",
-		"__user":              "foo",
-		"__org":               "perses",
-		"__name":              "john",
-		"__dashboard":         "the_infamous_one",
+	globalVariableList           = []variableTuple{
+		// Don't change the order.
+		// The order matters because, when replacing the variable with its value in the expression, if, for example,
+		// __interval is replaced before __interval_ms, then you might have partially replaced the variable.
+		// Example: 1 / __interval_ms will give 1 / 20m_s which is not a correct PromQL expression.
+		// So we need to replace __interval_ms before __interval.
+		// Same thing applied for every variable starting with the same prefix. Like __from, __to.
+		{
+			name:  "__interval_ms",
+			value: "1200000",
+		},
+		{
+			name:  "__interval",
+			value: "20m",
+		},
+		{
+			name:  "interval",
+			value: "20m",
+		},
+		{
+			name:  "resolution",
+			value: "5m",
+		},
+		{
+			name:  "__rate_interval_ms",
+			value: "1200000",
+		},
+		{
+			name:  "__rate_interval",
+			value: "20m",
+		},
+		{
+			name:  "rate_interval",
+			value: "20m",
+		},
+		{
+			name:  "__range_s:glob",
+			value: "15",
+		},
+		{
+			name:  "__range_s",
+			value: "15",
+		},
+		{
+			name:  "__range_ms",
+			value: "15",
+		},
+		{
+			name:  "__range",
+			value: "1d",
+		},
+		{
+			name:  "__from:date:YYYY-MM",
+			value: "2020-07",
+		},
+		{
+			name:  "__from:date:seconds",
+			value: "1594671549",
+		},
+		{
+			name:  "__from:date:iso",
+			value: "2020-07-13T20:19:09.254Z",
+		},
+		{
+			name:  "__from:date",
+			value: "2020-07-13T20:19:09.254Z",
+		},
+		{
+			name:  "__from",
+			value: "1594671549254",
+		},
+		{
+			name:  "__to:date:YYYY-MM",
+			value: "2020-07",
+		},
+		{
+			name:  "__to:date:seconds",
+			value: "1594671549",
+		},
+		{
+			name:  "__to:date:iso",
+			value: "2020-07-13T20:19:09.254Z",
+		},
+		{
+			name:  "__to:date",
+			value: "2020-07-13T20:19:09.254Z",
+		},
+		{
+			name:  "__to",
+			value: "1594671549254",
+		},
+		{
+			name:  "__user",
+			value: "foo",
+		},
+		{
+			name:  "__org",
+			value: "perses",
+		},
+		{
+			name:  "__name",
+			value: "john",
+		},
+		{
+			name:  "__dashboard",
+			value: "the_infamous_one",
+		},
 	}
-	variableReplacer = strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(globalVariableList)...)
+	variableReplacer = strings.NewReplacer(generateGrafanaTupleVariableSyntaxReplacer(globalVariableList)...)
 )
 
 func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.SimpleTask, error) {
@@ -100,8 +186,9 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.Simp
 }
 
 type logError struct {
-	msg string
-	err error
+	msg  string
+	warn error
+	err  error
 }
 
 type grafanaCollector struct {
@@ -130,7 +217,11 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 		c.logger.Debugf("extracting metrics for the dashboard %s with UID %q", h.Title, h.UID)
 		metrics, errs := extractMetrics(dashboard)
 		for _, extractError := range errs {
-			c.logger.WithError(extractError.err).Error(extractError.msg)
+			if extractError.warn != nil {
+				c.logger.WithError(extractError.warn).Warning(extractError.msg)
+			} else {
+				c.logger.WithError(extractError.err).Error(extractError.msg)
+			}
 		}
 		metricUsage := c.generateUsage(metrics, dashboard)
 		c.logger.Infof("%d metrics usage has been collected for the dashboard %q with UID %q", len(metricUsage), h.Title, h.UID)
@@ -221,6 +312,14 @@ func generateGrafanaVariableSyntaxReplacer(variables map[string]string) []string
 	return result
 }
 
+func generateGrafanaTupleVariableSyntaxReplacer(variables []variableTuple) []string {
+	var result []string
+	for _, v := range variables {
+		result = append(result, fmt.Sprintf("$%s", v.name), v.value, fmt.Sprintf("${%s}", v.name), v.value)
+	}
+	return result
+}
+
 func extractMetrics(dashboard *simplifiedDashboard) ([]string, []logError) {
 	staticVariables := strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(extractStaticVariables(dashboard.Templating.List))...)
 	m1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, dashboard)
@@ -264,9 +363,11 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 		}
 		query, err := v.extractQueryFromVariableTemplating()
 		if err != nil {
+			// It appears when there is an issue, we cannot do anything about it actually and usually the variable is not the one we are looking for.
+			// So we just log it as a warning
 			errs = append(errs, logError{
-				err: err,
-				msg: fmt.Sprintf("failed to extract query in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID),
+				warn: err,
+				msg:  fmt.Sprintf("failed to extract query in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID),
 			})
 			continue
 		}

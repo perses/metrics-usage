@@ -30,9 +30,14 @@ func TestExtractMetrics(t *testing.T) {
 			resultMetrics: []string{"run", "service_color"},
 		},
 		{
-			name:          "loading runtime variable",
+			name:          "use static variable",
 			dashboardFile: "tests/d2.json",
 			resultMetrics: []string{"gacms_svc_elapsed_time_seconds_bucket"},
+		},
+		{
+			name:          "variable replace order",
+			dashboardFile: "tests/d3.json",
+			resultMetrics: []string{"probe_success"},
 		},
 	}
 	for _, tt := range tests {
