@@ -74,32 +74,29 @@ The tool provides an API endpoint, `/api/v1/metrics`, which returns the usage da
 
 ## How to use it
 
-### Central Usage
+### Central instance
 
-Metrics Usage can be used as a central way. That means you have a stateful instance that will pull the data from every source.
+Metrics Usage can be configured as a central instance, which collects data from multiple sources in a stateful setup.
 
 ![Architecture overview](docs/architecture/central_architecture_usage.svg)
 
-### Using sidecar container for the rules
+### Sidecar Container for Rules Collection
 
-Pulling the various rules through a central Thanos can ended up to fail because there are too many. 
-And listing every Thanos Ruler or every Prometheus is horrible to maintain, 
-that's why we are offering a way to use metrics_usage as a sidecar container. 
-Like that, you can configure it to push the data to a central instance.
+In setups with numerous rules, central data collection may become impractical due to the volume. Instead, you can deploy Metrics Usage as a sidecar container, configured to push data to a central instance.
 
 ![Architecture overview](docs/architecture/sidecar_rules_usage.svg)
 
 ## Available Collectors
 
-There is a various way to collect the metrics usage, here the complete list of the available collectors:
+Metrics Usage offers various collectors for obtaining metric usage data:
 
 ### Prometheus Metric Collector
 
-This collector gets the list of metrics for a defined period of time. This list is then stored in the system waiting to associate them with their usage find by the other collectors.
+This collector retrieves a list of metrics over a specified period and stores them for association with usage data from other collectors.
 
 #### Configuration
 
-See the doc for the complete configuration [here](./docs/configuration.md#metric_collector-config)
+> Refer to the complete configuration [here](./docs/configuration.md#metric_collector-config)
 
 Example:
 
@@ -112,13 +109,13 @@ metric_collector:
 
 ### Prometheus Rule Collector
 
-This collector gets the Prometheus Rules Group using the HTTP API. Then it extracts the metric used in the alert rule or in the recording rule.
+This collector retrieves Prometheus rule groups using the HTTP API and extracts metrics from alerting & recording rules.
 
-You define a set of rule collectors as we are assuming rules can com from various Prometheus / Thanos rulers.
+Multiple rule collectors can be configured for different Prometheus/Thanos instances.
 
 #### Configuration
 
-See the doc for the complete configuration [here](./docs/configuration.md#rules_collector-config)
+> Refer to the complete configuration [here](./docs/configuration.md#rules_collector-config)
 
 Example: 
 
@@ -131,11 +128,11 @@ rules_collectors:
 
 ### Perses Collector
 
-This collector gets the list of dashboards using the HTTP API of Perses. Then it extracts the metric used in the variables and in the different panels.
+This collector fetches dashboards from Perses via its HTTP API, extracting metrics used in variables and panels.
 
 #### Configuration
 
-See the doc for the complete configuration [here](./docs/configuration.md#perses_collector-config)
+> Refer to the complete configuration [here](./docs/configuration.md#perses_collector-config)
 
 Example:
 
@@ -148,11 +145,11 @@ perses_collector:
 
 ### Grafana Collector
 
-This collector gets the list of dashboards using the HTTP API of Grafana. Then it extracts the metric used in the different panels.
+This collector fetches dashboards from Grafana via its HTTP API, extracting metrics used in the panels.
 
 #### Configuration
 
-See the doc for the complete configuration [here](./docs/configuration.md#grafana_collector-config)
+> Refer to the complete configuration [here](./docs/configuration.md#grafana_collector-config)
 
 Example:
 
@@ -165,19 +162,17 @@ grafana_collector:
 
 ## Install
 
-There are various ways of installing Metrics-Usage.
+There are several ways of installing Metrics Usage:
 
 ### Precompiled binaries
 
-Precompiled binaries for released versions are available in
-the [GitHub release](https://github.com/perses/metrics-usage/releases). Using the latest release binary is the recommended way
-of installing Metrics-Usage.
+Download precompiled binaries from the [GitHub releases page](https://github.com/perses/metrics-usage/releases). It is recommended to use the latest release available.
 
 ### Docker images
 
 Docker images are available on [Docker Hub](https://hub.docker.com/r/persesdev/metrics-usage).
 
-You can launch a Metrics-Usage container for trying it out with:
+To try it out with Docker:
 
 ```bash
 docker run --name metrics-usage -d -p 127.0.0.1:8080:8080 persesdev/metrics-usage
@@ -185,9 +180,7 @@ docker run --name metrics-usage -d -p 127.0.0.1:8080:8080 persesdev/metrics-usag
 
 ### Building from source
 
-To build Metrics-Usage from source code, You need:
-
-- Go [version 1.23 or greater](https://golang.org/doc/install).
+> To build from source, you’ll need Go [version 1.23 or higher](https://golang.org/doc/install).
 
 Start by cloning the repository:
 
@@ -196,7 +189,7 @@ git clone https://github.com/perses/metrics-usage.git
 cd metrics-usage
 ```
 
-Then you can use `make build` that would build the web assets and then Metrics-Usage itself.
+Then build the web assets and Metrics Usage itself with:
 
 ```bash
 make build
