@@ -21,3 +21,25 @@ func InsertIfNotPresent[T comparable](slice []T, item T) []T {
 	}
 	return append(slice, item)
 }
+
+func Merge[T comparable](old, new []T) []T {
+	if len(old) == 0 {
+		return new
+	}
+	if len(new) == 0 {
+		return old
+	}
+	for _, a := range old {
+		found := false
+		for _, b := range new {
+			if a == b {
+				found = true
+				break
+			}
+		}
+		if !found {
+			new = append(new, a)
+		}
+	}
+	return new
+}

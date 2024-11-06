@@ -21,6 +21,7 @@ import (
 
 	"github.com/perses/metrics-usage/config"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/metrics-usage/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -176,30 +177,8 @@ func mergeUsage(old, new *v1.MetricUsage) *v1.MetricUsage {
 		return old
 	}
 	return &v1.MetricUsage{
-		Dashboards:     mergeSlice(old.Dashboards, new.Dashboards),
-		RecordingRules: mergeSlice(old.RecordingRules, new.RecordingRules),
-		AlertRules:     mergeSlice(old.AlertRules, new.AlertRules),
+		Dashboards:     utils.Merge(old.Dashboards, new.Dashboards),
+		RecordingRules: utils.Merge(old.RecordingRules, new.RecordingRules),
+		AlertRules:     utils.Merge(old.AlertRules, new.AlertRules),
 	}
-}
-
-func mergeSlice[T comparable](old, new []T) []T {
-	if len(old) == 0 {
-		return new
-	}
-	if len(new) == 0 {
-		return old
-	}
-	for _, a := range old {
-		found := false
-		for _, b := range new {
-			if a == b {
-				found = true
-				break
-			}
-		}
-		if !found {
-			new = append(new, a)
-		}
-	}
-	return new
 }

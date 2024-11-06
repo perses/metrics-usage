@@ -30,10 +30,15 @@ type row struct {
 	Panels []panel `json:"panels"`
 }
 
+type option struct {
+	Value string `json:"value"`
+}
+
 type templateVar struct {
-	Name  string      `json:"name"`
-	Type  string      `json:"type"`
-	Query interface{} `json:"query"`
+	Name    string      `json:"name"`
+	Type    string      `json:"type"`
+	Query   interface{} `json:"query"`
+	Options []option    `json:"options"`
 }
 
 // extractQueryFromVariableTemplating will extract the PromQL expression from query.
@@ -50,7 +55,7 @@ func (v templateVar) extractQueryFromVariableTemplating() (string, error) {
 			return query, nil
 		}
 	}
-	return "", fmt.Errorf("query variable %q doesn't have the right type (string, or JSON object). It is of type %T", v.Name, v.Query)
+	return "", fmt.Errorf("unable to extract the query expression from the variable %q", v.Name)
 }
 
 type simplifiedDashboard struct {
