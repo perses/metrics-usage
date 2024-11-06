@@ -40,17 +40,34 @@ var (
 	queryResultRegexp            = regexp.MustCompile(`(?s)query_result\((.+)\)`)
 	variableRangeQueryRangeRegex = regexp.MustCompile(`\[\$?\w+?]`)
 	variableSubqueryRangeRegex   = regexp.MustCompile(`\[\$?\w+:\$?\w+?]`)
-	variableReplacer             = strings.NewReplacer(
-		"$__interval", "5m",
-		"$interval", "5m",
-		"$resolution", "5m",
-		"$__rate_interval", "15s",
-		"$rate_interval", "15s",
-		"$__range", "1d",
-		"${__range_s:glob}", "15",
-		"${__range_s}", "15",
-		"${__range_ms}", "15",
-	)
+	globalVariableList           = map[string]string{
+		"__interval":          "20m",
+		"interval":            "20m",
+		"__interval_ms":       "1200000",
+		"resolution":          "5m",
+		"__rate_interval":     "20m",
+		"rate_interval":       "20m",
+		"__rate_interval_ms":  "1200000",
+		"__range":             "1d",
+		"__range_s:glob":      "15",
+		"__range_s":           "15",
+		"__range_ms":          "15",
+		"__from":              "1594671549254",
+		"__from:date":         "2020-07-13T20:19:09.254Z",
+		"__from:date:iso":     "2020-07-13T20:19:09.254Z",
+		"__from:date:seconds": "1594671549",
+		"__from:date:YYYY-MM": "2020-07",
+		"__to":                "1594671549254",
+		"__to:date":           "2020-07-13T20:19:09.254Z",
+		"__to:date:iso":       "2020-07-13T20:19:09.254Z",
+		"__to:date:seconds":   "1594671549",
+		"__to:date:YYYY-MM":   "2020-07",
+		"__user":              "foo",
+		"__org":               "perses",
+		"__name":              "john",
+		"__dashboard":         "the_infamous_one",
+	}
+	variableReplacer = strings.NewReplacer(generateGrafanaVariableSyntaxReplacer()...)
 )
 
 func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.SimpleTask, error) {
@@ -82,6 +99,11 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.Simp
 	}, nil
 }
 
+type logError struct {
+	msg string
+	err error
+}
+
 type grafanaCollector struct {
 	async.SimpleTask
 	db                database.Database
@@ -99,7 +121,6 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 	}
 	c.logger.Infof("collecting %d Grafana dashboards", len(hits))
 
-	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	for _, h := range hits {
 		dashboard, getErr := c.getDashboard(h.UID)
 		if getErr != nil {
@@ -107,77 +128,24 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 			continue
 		}
 		c.logger.Debugf("extracting metrics for the dashboard %s with UID %q", h.Title, h.UID)
-		c.extractMetricUsage(metricUsage, dashboard)
-	}
-	c.logger.Debugf("%d metrics usage has been collected", len(metricUsage))
-	if len(metricUsage) > 0 {
-		if c.metricUsageClient != nil {
-			// In this case, that means we have to send the data to a remote server.
-			if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
-				c.logger.WithError(sendErr).Error("Failed to send usage metric")
+		metrics, errs := extractMetrics(dashboard)
+		for _, extractError := range errs {
+			c.logger.WithError(extractError.err).Error(extractError.msg)
+		}
+		metricUsage := c.generateUsage(metrics, dashboard)
+		c.logger.Debugf("%d metrics usage has been collected for the dashboard %q with UID %q", len(metricUsage), h.Title, h.UID)
+		if len(metricUsage) > 0 {
+			if c.metricUsageClient != nil {
+				// In this case, that means we have to send the data to a remote server.
+				if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
+					c.logger.WithError(sendErr).Error("Failed to send usage metric")
+				}
+			} else {
+				c.db.EnqueueUsage(metricUsage)
 			}
-		} else {
-			c.db.EnqueueUsage(metricUsage)
 		}
 	}
 	return nil
-}
-
-func (c *grafanaCollector) extractMetricUsage(metricUsage map[string]*modelAPIV1.MetricUsage, dashboard *simplifiedDashboard) {
-	c.extractMetricUsageFromPanels(metricUsage, dashboard.Panels, dashboard)
-	for _, r := range dashboard.Rows {
-		c.extractMetricUsageFromPanels(metricUsage, r.Panels, dashboard)
-	}
-	c.extractMetricUsageFromVariables(metricUsage, dashboard.Templating.List, dashboard)
-}
-
-func (c *grafanaCollector) extractMetricUsageFromPanels(metricUsage map[string]*modelAPIV1.MetricUsage, panels []panel, dashboard *simplifiedDashboard) {
-	for _, p := range panels {
-		for _, t := range extractTarget(p) {
-			if len(t.Expr) == 0 {
-				continue
-			}
-			metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(t.Expr))
-			if err != nil {
-				c.logger.WithError(err).Errorf("failed to extract metric names from PromQL expression in the panel %q for the dashboard %s/%s", p.Title, dashboard.Title, dashboard.UID)
-			}
-			c.populateUsage(metricUsage, metrics, dashboard)
-		}
-	}
-}
-
-func (c *grafanaCollector) extractMetricUsageFromVariables(metricUsage map[string]*modelAPIV1.MetricUsage, variables []templateVar, dashboard *simplifiedDashboard) {
-	for _, v := range variables {
-		if v.Type != "query" {
-			continue
-		}
-		query, err := v.extractQueryFromVariableTemplating()
-		if err != nil {
-			c.logger.WithError(err).Errorf("failed to extract query in a variable")
-			continue
-		}
-		// label_values(query, label)
-		if labelValuesRegexp.MatchString(query) {
-			sm := labelValuesRegexp.FindStringSubmatch(query)
-			if len(sm) > 0 {
-				query = sm[1]
-			} else {
-				continue
-			}
-		} else if labelValuesNoQueryRegexp.MatchString(query) {
-			// No query so no metric.
-			continue
-		} else if queryResultRegexp.MatchString(query) {
-			// query_result(query)
-			query = queryResultRegexp.FindStringSubmatch(query)[1]
-		}
-		metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(query))
-		if err != nil {
-			c.logger.WithError(err).Errorf("failed to extract metric names from PromQL expression in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID)
-			continue
-		}
-		c.populateUsage(metricUsage, metrics, dashboard)
-	}
 }
 
 func (c *grafanaCollector) getDashboard(uid string) (*simplifiedDashboard, error) {
@@ -218,7 +186,8 @@ func (c *grafanaCollector) collectAllDashboardUID(ctx context.Context) ([]*grafa
 	return result, nil
 }
 
-func (c *grafanaCollector) populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames []string, currentDashboard *simplifiedDashboard) {
+func (c *grafanaCollector) generateUsage(metricNames []string, currentDashboard *simplifiedDashboard) map[string]*modelAPIV1.MetricUsage {
+	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	dashboardURL := fmt.Sprintf("%s/d/%s", c.grafanaURL, currentDashboard.UID)
 	for _, metricName := range metricNames {
 		if usage, ok := metricUsage[metricName]; ok {
@@ -229,6 +198,7 @@ func (c *grafanaCollector) populateUsage(metricUsage map[string]*modelAPIV1.Metr
 			}
 		}
 	}
+	return metricUsage
 }
 
 func (c *grafanaCollector) String() string {
@@ -240,4 +210,88 @@ func replaceVariables(expr string) string {
 	newExpr = variableRangeQueryRangeRegex.ReplaceAllLiteralString(newExpr, `[5m]`)
 	newExpr = variableSubqueryRangeRegex.ReplaceAllLiteralString(newExpr, `[5m:1m]`)
 	return newExpr
+}
+
+func generateGrafanaVariableSyntaxReplacer() []string {
+	var result []string
+	for variable, value := range globalVariableList {
+		result = append(result, fmt.Sprintf("$%s", variable), value, fmt.Sprintf("${%s}", variable), value)
+	}
+	return result
+}
+
+func extractMetrics(dashboard *simplifiedDashboard) ([]string, []logError) {
+	m1, err1 := extractMetricsFromPanels(dashboard.Panels, dashboard)
+	for _, r := range dashboard.Rows {
+		m2, err2 := extractMetricsFromPanels(r.Panels, dashboard)
+		m1 = utils.Merge(m1, m2)
+		err1 = append(err1, err2...)
+	}
+	m3, err3 := extractMetricsFromVariables(dashboard.Templating.List, dashboard)
+	return utils.Merge(m1, m3), append(err1, err3...)
+}
+
+func extractMetricsFromPanels(panels []panel, dashboard *simplifiedDashboard) ([]string, []logError) {
+	var errs []logError
+	var result []string
+	for _, p := range panels {
+		for _, t := range extractTarget(p) {
+			if len(t.Expr) == 0 {
+				continue
+			}
+			metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(t.Expr))
+			if err != nil {
+				errs = append(errs, logError{
+					err: err,
+					msg: fmt.Sprintf("failed to extract metric names from PromQL expression in the panel %q for the dashboard %s/%s", p.Title, dashboard.Title, dashboard.UID),
+				})
+			} else {
+				result = utils.Merge(result, metrics)
+			}
+		}
+	}
+	return result, errs
+}
+
+func extractMetricsFromVariables(variables []templateVar, dashboard *simplifiedDashboard) ([]string, []logError) {
+	var errs []logError
+	var result []string
+	for _, v := range variables {
+		if v.Type != "query" {
+			continue
+		}
+		query, err := v.extractQueryFromVariableTemplating()
+		if err != nil {
+			errs = append(errs, logError{
+				err: err,
+				msg: fmt.Sprintf("failed to extract query in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID),
+			})
+			continue
+		}
+		// label_values(query, label)
+		if labelValuesRegexp.MatchString(query) {
+			sm := labelValuesRegexp.FindStringSubmatch(query)
+			if len(sm) > 0 {
+				query = sm[1]
+			} else {
+				continue
+			}
+		} else if labelValuesNoQueryRegexp.MatchString(query) {
+			// No query so no metric.
+			continue
+		} else if queryResultRegexp.MatchString(query) {
+			// query_result(query)
+			query = queryResultRegexp.FindStringSubmatch(query)[1]
+		}
+		metrics, err := prometheus.ExtractMetricNamesFromPromQL(replaceVariables(query))
+		if err != nil {
+			errs = append(errs, logError{
+				err: err,
+				msg: fmt.Sprintf("failed to extract metric names from PromQL expression in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID),
+			})
+		} else {
+			result = utils.Merge(result, metrics)
+		}
+	}
+	return result, errs
 }
