@@ -6,6 +6,7 @@ require (
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20241101140420-bc381928ae6e
 	github.com/labstack/echo/v4 v4.12.0
+	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.26.0
 	github.com/perses/perses v0.49.0-rc.1.0.20241104091321-0a0482386006
 	github.com/prometheus/client_golang v1.20.5

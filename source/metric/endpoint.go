@@ -18,6 +18,7 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
+	"github.com/lithammer/fuzzysearch/fuzzy"
 	persesEcho "github.com/perses/common/echo"
 	"github.com/perses/metrics-usage/database"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
@@ -49,8 +50,37 @@ func (e *endpoint) GetMetric(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, metric)
 }
 
+type request struct {
+	MetricName string `query:"metric_name"`
+	Used       *bool  `query:"used"`
+}
+
+func (r *request) filter(list map[string]*v1.Metric) map[string]*v1.Metric {
+	result := make(map[string]*v1.Metric)
+	if len(r.MetricName) == 0 && r.Used == nil {
+		return list
+	}
+	for k, v := range list {
+		if len(r.MetricName) == 0 || fuzzy.Match(r.MetricName, k) {
+			if r.Used == nil {
+				result[k] = v
+			} else if *r.Used && list[k].Usage != nil {
+				result[k] = v
+			} else if !*r.Used && list[k].Usage == nil {
+				result[k] = v
+			}
+		}
+	}
+	return result
+}
+
 func (e *endpoint) ListMetrics(ctx echo.Context) error {
-	return ctx.JSON(http.StatusOK, e.db.ListMetrics())
+	req := &request{}
+	err := ctx.Bind(req)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, req.filter(e.db.ListMetrics()))
 }
 
 func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
