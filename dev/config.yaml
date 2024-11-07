@@ -8,6 +8,11 @@ rules_collectors:
     prometheus_client:
       url: "https://prometheus.demo.do.prometheus.io"
 
+labels_collectors:
+  - enable: true
+    prometheus_client:
+      url: "https://prometheus.demo.do.prometheus.io"
+
 perses_collector:
   enable: true
   perses_client:

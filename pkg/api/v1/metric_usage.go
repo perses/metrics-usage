@@ -27,5 +27,6 @@ type MetricUsage struct {
 }
 
 type Metric struct {
-	Usage *MetricUsage `json:"usage,omitempty"`
+	Labels []string     `json:"labels,omitempty"`
+	Usage  *MetricUsage `json:"usage,omitempty"`
 }

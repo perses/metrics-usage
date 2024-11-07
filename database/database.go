@@ -30,6 +30,7 @@ type Database interface {
 	ListMetrics() map[string]*v1.Metric
 	EnqueueMetricList(metrics []string)
 	EnqueueUsage(usages map[string]*v1.MetricUsage)
+	EnqueueLabels(labels map[string][]string)
 }
 
 func New(cfg config.Database) Database {
@@ -37,12 +38,14 @@ func New(cfg config.Database) Database {
 		metrics:      make(map[string]*v1.Metric),
 		usage:        make(map[string]*v1.MetricUsage),
 		usageQueue:   make(chan map[string]*v1.MetricUsage, 250),
+		labelsQueue:  make(chan map[string][]string, 250),
 		metricsQueue: make(chan []string, 10),
 		path:         cfg.Path,
 	}
 
 	go d.watchUsageQueue()
 	go d.watchMetricsQueue()
+	go d.watchLabelsQueue()
 	if !*cfg.InMemory {
 		if err := d.readMetricsInJSONFile(); err != nil {
 			logrus.WithError(err).Warning("failed to read metrics file")
@@ -62,6 +65,10 @@ type db struct {
 	// metricsQueue is the channel that should be used to send and receive the list of metric name to keep in memory.
 	// Based on this list, we will then collect their usage.
 	metricsQueue chan []string
+	// labelsQueue is the way to send the labels per metric to write in the database.
+	// There will be no other way to write in it.
+	// Doing that allows us to accept more HTTP requests to write data and to delay the actual writing.
+	labelsQueue chan map[string][]string
 	// usageQueue is the way to send the usage per metric to write in the database.
 	// There will be no other way to write in it.
 	// Doing that allows us to accept more HTTP requests to write data and to delay the actual writing.
@@ -97,6 +104,10 @@ func (d *db) EnqueueMetricList(metrics []string) {
 
 func (d *db) EnqueueUsage(usages map[string]*v1.MetricUsage) {
 	d.usageQueue <- usages
+}
+
+func (d *db) EnqueueLabels(labels map[string][]string) {
+	d.labelsQueue <- labels
 }
 
 func (d *db) watchMetricsQueue() {
@@ -135,6 +146,23 @@ func (d *db) watchUsageQueue() {
 				}
 			} else {
 				d.metrics[metricName].Usage = mergeUsage(d.metrics[metricName].Usage, usage)
+			}
+		}
+		d.mutex.Unlock()
+	}
+}
+
+func (d *db) watchLabelsQueue() {
+	for data := range d.labelsQueue {
+		d.mutex.Lock()
+		for metricName, labels := range data {
+			if _, ok := d.metrics[metricName]; !ok {
+				// In this case, we should add the metric, because it means the metrics has been found from another source.
+				d.metrics[metricName] = &v1.Metric{
+					Labels: labels,
+				}
+			} else {
+				d.metrics[metricName].Labels = utils.Merge(d.metrics[metricName].Labels, labels)
 			}
 		}
 		d.mutex.Unlock()

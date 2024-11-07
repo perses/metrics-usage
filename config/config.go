@@ -50,11 +50,12 @@ func (d *Database) Verify() error {
 }
 
 type Config struct {
-	Database         Database          `yaml:"database"`
-	MetricCollector  MetricCollector   `yaml:"metric_collector,omitempty"`
-	RulesCollectors  []*RulesCollector `yaml:"rules_collectors,omitempty"`
-	PersesCollector  PersesCollector   `yaml:"perses_collector,omitempty"`
-	GrafanaCollector GrafanaCollector  `yaml:"grafana_collector,omitempty"`
+	Database         Database           `yaml:"database"`
+	MetricCollector  MetricCollector    `yaml:"metric_collector,omitempty"`
+	RulesCollectors  []*RulesCollector  `yaml:"rules_collectors,omitempty"`
+	LabelsCollectors []*LabelsCollector `yaml:"labels_collectors,omitempty"`
+	PersesCollector  PersesCollector    `yaml:"perses_collector,omitempty"`
+	GrafanaCollector GrafanaCollector   `yaml:"grafana_collector,omitempty"`
 }
 
 func Resolve(configFile string) (Config, error) {

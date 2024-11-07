@@ -21,6 +21,7 @@ import (
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
 	"github.com/perses/metrics-usage/source/grafana"
+	"github.com/perses/metrics-usage/source/labels"
 	"github.com/perses/metrics-usage/source/metric"
 	"github.com/perses/metrics-usage/source/perses"
 	"github.com/perses/metrics-usage/source/rules"
@@ -60,6 +61,16 @@ func main() {
 		}
 	}
 
+	for i, labelsCollectorConfig := range conf.LabelsCollectors {
+		if labelsCollectorConfig.Enable {
+			labelsCollector, collectorErr := labels.NewCollector(db, labelsCollectorConfig)
+			if collectorErr != nil {
+				logrus.WithError(collectorErr).Fatalf("unable to create the labels collector number %d", i)
+			}
+			runner.WithTimerTasks(time.Duration(labelsCollectorConfig.Period), labelsCollector)
+		}
+	}
+
 	if conf.PersesCollector.Enable {
 		persesCollectorConfig := conf.PersesCollector
 		persesCollector, collectorErr := perses.NewCollector(db, persesCollectorConfig)
@@ -81,6 +92,7 @@ func main() {
 	runner.HTTPServerBuilder().
 		ActivatePprof(*pprof).
 		APIRegistration(metric.NewAPI(db)).
-		APIRegistration(rules.NewAPI(db))
+		APIRegistration(rules.NewAPI(db)).
+		APIRegistration(labels.NewAPI(db))
 	runner.Start()
 }
