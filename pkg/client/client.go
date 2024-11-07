@@ -27,6 +27,7 @@ import (
 
 type Client interface {
 	Usage(map[string]*modelAPIV1.MetricUsage) error
+	Labels(map[string][]string) error
 }
 
 func New(cfg config.HTTPClient) (Client, error) {
@@ -57,6 +58,22 @@ func (c *client) Usage(metrics map[string]*modelAPIV1.MetricUsage) error {
 	}
 	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusPartialContent {
 		return fmt.Errorf("when sending metrics usage, unexpected status code: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func (c *client) Labels(labels map[string][]string) error {
+	data, err := json.Marshal(labels)
+	if err != nil {
+		return err
+	}
+	body := bytes.NewBuffer(data)
+	resp, err := c.httpClient.Post(c.url("/api/v1/labels").String(), "application/json", body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode < http.StatusOK || resp.StatusCode > http.StatusPartialContent {
+		return fmt.Errorf("when sending label names, unexpected status code: %d", resp.StatusCode)
 	}
 	return nil
 }
