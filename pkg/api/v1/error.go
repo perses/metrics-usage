@@ -11,25 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prometheus
+package v1
 
-import (
-	"github.com/perses/metrics-usage/config"
-	"github.com/prometheus/client_golang/api"
-	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-)
+import "github.com/sirupsen/logrus"
 
-func NewClient(cfg config.HTTPClient) (v1.API, error) {
-	httpClient, err := config.NewHTTPClient(cfg)
-	if err != nil {
-		return nil, err
+type LogError struct {
+	Message string
+	Warning error
+	Error   error
+}
+
+func (l *LogError) Log(logger *logrus.Entry) {
+	if l.Error != nil {
+		logger.WithError(l.Error).Error(l.Message)
+	} else {
+		logger.WithError(l.Warning).Warning(l.Message)
 	}
-	promHTTPClient, err := api.NewClient(api.Config{
-		Address: cfg.URL.String(),
-		Client:  httpClient,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return v1.NewAPI(promHTTPClient), nil
 }

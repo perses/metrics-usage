@@ -15,19 +15,19 @@ package grafana
 
 import "fmt"
 
-type target struct {
+type Target struct {
 	Expr string `json:"expr,omitempty"`
 }
 
-type panel struct {
+type Panel struct {
 	Type    string   `json:"type"`
 	Title   string   `json:"title"`
-	Panels  []panel  `json:"panels"`
-	Targets []target `json:"targets"`
+	Panels  []Panel  `json:"panels"`
+	Targets []Target `json:"targets"`
 }
 
 type row struct {
-	Panels []panel `json:"panels"`
+	Panels []Panel `json:"panels"`
 }
 
 type option struct {
@@ -58,18 +58,18 @@ func (v templateVar) extractQueryFromVariableTemplating() (string, error) {
 	return "", fmt.Errorf("unable to extract the query expression from the variable %q", v.Name)
 }
 
-type simplifiedDashboard struct {
+type SimplifiedDashboard struct {
 	UID        string  `json:"uid,omitempty"`
 	Title      string  `json:"title"`
-	Panels     []panel `json:"panels"`
+	Panels     []Panel `json:"panels"`
 	Rows       []row   `json:"rows"`
 	Templating struct {
 		List []templateVar `json:"list"`
 	} `json:"templating"`
 }
 
-func extractTarget(panel panel) []target {
-	var targets []target
+func extractTarget(panel Panel) []Target {
+	var targets []Target
 	for _, p := range panel.Panels {
 		targets = append(targets, extractTarget(p)...)
 	}
