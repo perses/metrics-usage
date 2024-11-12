@@ -1,3 +1,16 @@
+// Copyright 2024 The Perses Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package grafana
 
 import (
@@ -5,24 +18,25 @@ import (
 	"os"
 	"testing"
 
+	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/stretchr/testify/assert"
 )
 
-func unmarshalDashboard(path string) (*simplifiedDashboard, error) {
+func unmarshalDashboard(path string) (*SimplifiedDashboard, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	result := &simplifiedDashboard{}
+	result := &SimplifiedDashboard{}
 	return result, json.Unmarshal(data, result)
 }
 
-func TestExtractMetrics(t *testing.T) {
+func TestAnalyze(t *testing.T) {
 	tests := []struct {
 		name          string
 		dashboardFile string
 		resultMetrics []string
-		resultErrs    []logError
+		resultErrs    []*modelAPIV1.LogError
 	}{
 		{
 			name:          "from/to variables",
@@ -46,7 +60,7 @@ func TestExtractMetrics(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			metrics, errs := extractMetrics(dashboard)
+			metrics, errs := Analyze(dashboard)
 			assert.Equal(t, tt.resultMetrics, metrics)
 			assert.Equal(t, tt.resultErrs, errs)
 		})

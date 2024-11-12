@@ -19,7 +19,9 @@ import (
 	"github.com/labstack/echo/v4"
 	persesEcho "github.com/perses/common/echo"
 	"github.com/perses/metrics-usage/database"
+	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
+	"github.com/sirupsen/logrus"
 )
 
 func NewAPI(db database.Database) persesEcho.Register {
@@ -47,7 +49,10 @@ func (e *endpoint) PushRules(ctx echo.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
 	}
-	metricUsage := extractMetricUsageFromRules(data.Groups, data.Source)
+	metricUsage, errs := prometheus.Analyze(data.Groups, data.Source)
+	for _, logErr := range errs {
+		logErr.Log(logrus.StandardLogger().WithField("endpoint", "rules"))
+	}
 	if len(metricUsage) > 0 {
 		e.db.EnqueueUsage(metricUsage)
 	}
