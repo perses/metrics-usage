@@ -66,7 +66,7 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 				// No PromQL expression for the query
 				continue
 			}
-			metrics, err := prometheus.AnalyzePromQLExpression(replaceVariables(spec.Query))
+			metrics, _, err := prometheus.AnalyzePromQLExpression(replaceVariables(spec.Query))
 			if err != nil {
 				errs = append(errs, &modelAPIV1.LogError{
 					Error:   err,
@@ -106,7 +106,7 @@ func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDash
 			})
 			continue
 		}
-		metrics, err := prometheus.AnalyzePromQLExpression(replaceVariables(spec.Expr))
+		metrics, _, err := prometheus.AnalyzePromQLExpression(replaceVariables(spec.Expr))
 		if err != nil {
 			errs = append(errs, &modelAPIV1.LogError{
 				Error:   err,

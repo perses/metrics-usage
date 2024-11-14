@@ -145,43 +145,59 @@ var (
 	variableReplacer = strings.NewReplacer(generateGrafanaTupleVariableSyntaxReplacer(globalVariableList)...)
 )
 
-func Analyze(dashboard *SimplifiedDashboard) ([]string, []*modelAPIV1.LogError) {
+func Analyze(dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
 	staticVariables := strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(extractStaticVariables(dashboard.Templating.List))...)
-	m1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, dashboard)
+	m1, inv1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, dashboard)
 	for _, r := range dashboard.Rows {
-		m2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, dashboard)
+		m2, inv2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, dashboard)
 		m1 = utils.Merge(m1, m2)
+		inv1 = utils.Merge(inv1, inv2)
 		err1 = append(err1, err2...)
 	}
-	m3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, dashboard)
-	return utils.Merge(m1, m3), append(err1, err3...)
+	m3, inv3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, dashboard)
+	return utils.Merge(m1, m3), utils.Merge(inv1, inv3), append(err1, err3...)
 }
 
-func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, dashboard *SimplifiedDashboard) ([]string, []*modelAPIV1.LogError) {
+func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	var result []string
+	var invalidMetricsResult []string
 	for _, p := range panels {
 		for _, t := range extractTarget(p) {
 			if len(t.Expr) == 0 {
 				continue
 			}
-			metrics, err := prometheus.AnalyzePromQLExpression(replaceVariables(t.Expr, staticVariables))
+			exprWithVariableReplaced := replaceVariables(t.Expr, staticVariables)
+			metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 			if err != nil {
-				errs = append(errs, &modelAPIV1.LogError{
-					Error:   err,
-					Message: fmt.Sprintf("failed to extract metric names from PromQL expression in the panel %q for the dashboard %s/%s", p.Title, dashboard.Title, dashboard.UID),
-				})
+				otherMetrics := extractMetricNameWithVariable(exprWithVariableReplaced)
+				if len(otherMetrics) > 0 {
+					for _, m := range otherMetrics {
+						if prometheus.IsValidMetricName(m) {
+							result = utils.InsertIfNotPresent(result, m)
+						} else {
+							invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, m)
+						}
+					}
+				} else {
+					errs = append(errs, &modelAPIV1.LogError{
+						Error:   err,
+						Message: fmt.Sprintf("failed to extract metric names from PromQL expression in the panel %q for the dashboard %s/%s", p.Title, dashboard.Title, dashboard.UID),
+					})
+				}
 			} else {
 				result = utils.Merge(result, metrics)
+				invalidMetricsResult = utils.Merge(invalidMetricsResult, invalidMetrics)
 			}
 		}
 	}
-	return result, errs
+	return result, invalidMetricsResult, errs
 }
 
-func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, dashboard *SimplifiedDashboard) ([]string, []*modelAPIV1.LogError) {
+func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	var result []string
+	var invalidMetricsResult []string
 	for _, v := range variables {
 		if v.Type != "query" {
 			continue
@@ -211,17 +227,30 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 			// query_result(query)
 			query = queryResultRegexp.FindStringSubmatch(query)[1]
 		}
-		metrics, err := prometheus.AnalyzePromQLExpression(replaceVariables(query, staticVariables))
+		exprWithVariableReplaced := replaceVariables(query, staticVariables)
+		metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(replaceVariables(query, staticVariables))
 		if err != nil {
-			errs = append(errs, &modelAPIV1.LogError{
-				Error:   err,
-				Message: fmt.Sprintf("failed to extract metric names from PromQL expression in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID),
-			})
+			otherMetrics := extractMetricNameWithVariable(exprWithVariableReplaced)
+			if len(otherMetrics) > 0 {
+				for _, m := range otherMetrics {
+					if prometheus.IsValidMetricName(m) {
+						result = utils.InsertIfNotPresent(result, m)
+					} else {
+						invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, m)
+					}
+				}
+			} else {
+				errs = append(errs, &modelAPIV1.LogError{
+					Error:   err,
+					Message: fmt.Sprintf("failed to extract metric names from PromQL expression in variable %q for the dashboard %s/%s", v.Name, dashboard.Title, dashboard.UID),
+				})
+			}
 		} else {
 			result = utils.Merge(result, metrics)
+			invalidMetricsResult = utils.Merge(invalidMetricsResult, invalidMetrics)
 		}
 	}
-	return result, errs
+	return result, invalidMetricsResult, errs
 }
 
 func extractStaticVariables(variables []templateVar) map[string]string {
@@ -233,6 +262,10 @@ func extractStaticVariables(variables []templateVar) map[string]string {
 		}
 		if len(v.Options) > 0 {
 			result[v.Name] = v.Options[0].Value
+			if v.Type == "custom" {
+				// It seems the variable format <variable:value> ca be used for the "custom" variables.
+				result[fmt.Sprintf("%s:value", v.Name)] = v.Options[0].Value
+			}
 		}
 	}
 	return result
