@@ -26,14 +26,15 @@ import (
 
 var validMetricName = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 
-func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.MetricUsage, []*modelAPIV1.LogError) {
+func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.MetricUsage, map[string]*modelAPIV1.MetricUsage, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
+	invalidMetricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	for _, ruleGroup := range ruleGroups {
 		for _, rule := range ruleGroup.Rules {
 			switch v := rule.(type) {
 			case v1.RecordingRule:
-				metricNames, _, parserErr := AnalyzePromQLExpression(v.Query)
+				metricNames, invalidMetrics, parserErr := AnalyzePromQLExpression(v.Query)
 				if parserErr != nil {
 					errs = append(errs, &modelAPIV1.LogError{
 						Message: fmt.Sprintf("Failed to extract metric name for the ruleGroup %q and the recordingRule %q", ruleGroup.Name, v.Name),
@@ -51,8 +52,18 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 					},
 					false,
 				)
+				populateUsage(invalidMetricUsage,
+					invalidMetrics,
+					modelAPIV1.RuleUsage{
+						PromLink:   source,
+						GroupName:  ruleGroup.Name,
+						Name:       v.Name,
+						Expression: v.Query,
+					},
+					false,
+				)
 			case v1.AlertingRule:
-				metricNames, _, parserErr := AnalyzePromQLExpression(v.Query)
+				metricNames, invalidMetrics, parserErr := AnalyzePromQLExpression(v.Query)
 				if parserErr != nil {
 					errs = append(errs, &modelAPIV1.LogError{
 						Message: fmt.Sprintf("Failed to extract metric name for the ruleGroup %q and the alertingRule %q", ruleGroup.Name, v.Name),
@@ -70,6 +81,16 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 					},
 					true,
 				)
+				populateUsage(invalidMetricUsage,
+					invalidMetrics,
+					modelAPIV1.RuleUsage{
+						PromLink:   source,
+						GroupName:  ruleGroup.Name,
+						Name:       v.Name,
+						Expression: v.Query,
+					},
+					true,
+				)
 			default:
 				errs = append(errs, &modelAPIV1.LogError{
 					Error: fmt.Errorf("unknown rule type %T", rule),
@@ -77,7 +98,7 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 			}
 		}
 	}
-	return metricUsage, errs
+	return metricUsage, invalidMetricUsage, errs
 }
 
 // AnalyzePromQLExpression is returning a list of valid metric names extracted from the PromQL expression.

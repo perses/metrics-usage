@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/perses/metrics-usage/pkg/analyze/parser"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/utils"
@@ -170,7 +171,7 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 			exprWithVariableReplaced := replaceVariables(t.Expr, staticVariables)
 			metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 			if err != nil {
-				otherMetrics := extractMetricNameWithVariable(exprWithVariableReplaced)
+				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 				if len(otherMetrics) > 0 {
 					for _, m := range otherMetrics {
 						if prometheus.IsValidMetricName(m) {
@@ -228,9 +229,9 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 			query = queryResultRegexp.FindStringSubmatch(query)[1]
 		}
 		exprWithVariableReplaced := replaceVariables(query, staticVariables)
-		metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(replaceVariables(query, staticVariables))
+		metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 		if err != nil {
-			otherMetrics := extractMetricNameWithVariable(exprWithVariableReplaced)
+			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 			if len(otherMetrics) > 0 {
 				for _, m := range otherMetrics {
 					if prometheus.IsValidMetricName(m) {

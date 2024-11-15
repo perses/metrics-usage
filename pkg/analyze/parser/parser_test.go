@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grafana
+package parser
 
 import (
 	"testing"
@@ -43,7 +43,7 @@ func TestExtractMetricNameWithVariable(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			result := extractMetricNameWithVariable(test.expr)
+			result := ExtractMetricNameWithVariable(test.expr)
 			assert.Equal(t, test.result, result)
 		})
 	}

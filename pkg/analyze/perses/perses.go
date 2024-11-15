@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/perses/metrics-usage/pkg/analyze/parser"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/utils"
@@ -40,15 +41,16 @@ var variableReplacer = strings.NewReplacer(
 	"$__project", "perses",
 )
 
-func Analyze(dashboard *v1.Dashboard) ([]string, []*modelAPIV1.LogError) {
-	m1, err1 := extractMetricUsageFromVariables(dashboard.Spec.Variables, dashboard)
-	m2, err2 := extractMetricUsageFromPanels(dashboard.Spec.Panels, dashboard)
-	return utils.Merge(m1, m2), append(err1, err2...)
+func Analyze(dashboard *v1.Dashboard) ([]string, []string, []*modelAPIV1.LogError) {
+	m1, inv1, err1 := extractMetricUsageFromVariables(dashboard.Spec.Variables, dashboard)
+	m2, inv2, err2 := extractMetricUsageFromPanels(dashboard.Spec.Panels, dashboard)
+	return utils.Merge(m1, m2), utils.Merge(inv1, inv2), append(err1, err2...)
 }
 
-func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard) ([]string, []*modelAPIV1.LogError) {
+func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard) ([]string, []string, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	var result []string
+	var invalidMetricsResult []string
 	for panelName, panel := range panels {
 		for i, q := range panel.Spec.Queries {
 			if q.Spec.Plugin.Kind != query.PluginKind {
@@ -66,23 +68,37 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 				// No PromQL expression for the query
 				continue
 			}
-			metrics, _, err := prometheus.AnalyzePromQLExpression(replaceVariables(spec.Query))
+			exprWithVariableReplaced := replaceVariables(spec.Query)
+			metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 			if err != nil {
-				errs = append(errs, &modelAPIV1.LogError{
-					Error:   err,
-					Message: fmt.Sprintf("Failed to extract metric names from query %d in the panel %q for the dashboard '%s/%s'", i, panelName, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name),
-				})
-				continue
+				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
+				if len(otherMetrics) > 0 {
+					for _, m := range otherMetrics {
+						if prometheus.IsValidMetricName(m) {
+							result = utils.InsertIfNotPresent(result, m)
+						} else {
+							invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, m)
+						}
+					}
+				} else {
+					errs = append(errs, &modelAPIV1.LogError{
+						Error:   err,
+						Message: fmt.Sprintf("Failed to extract metric names from query %d in the panel %q for the dashboard '%s/%s'", i, panelName, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name),
+					})
+					continue
+				}
 			}
 			result = utils.Merge(result, metrics)
+			invalidMetricsResult = utils.Merge(invalidMetricsResult, invalidMetrics)
 		}
 	}
-	return result, errs
+	return result, invalidMetricsResult, errs
 }
 
-func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard) ([]string, []*modelAPIV1.LogError) {
+func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard) ([]string, []string, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	var result []string
+	var invalidMetricsResult []string
 	for _, v := range variables {
 		if v.Kind != variable.KindList {
 			continue
@@ -106,17 +122,30 @@ func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDash
 			})
 			continue
 		}
-		metrics, _, err := prometheus.AnalyzePromQLExpression(replaceVariables(spec.Expr))
+		exprWithVariableReplaced := replaceVariables(spec.Expr)
+		metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 		if err != nil {
-			errs = append(errs, &modelAPIV1.LogError{
-				Error:   err,
-				Message: fmt.Sprintf("Failed to extract metric names from variable for the dashboard '%s/%s'", currentDashboard.Metadata.Project, currentDashboard.Metadata.Name),
-			})
-			continue
+			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
+			if len(otherMetrics) > 0 {
+				for _, m := range otherMetrics {
+					if prometheus.IsValidMetricName(m) {
+						result = utils.InsertIfNotPresent(result, m)
+					} else {
+						invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, m)
+					}
+				}
+			} else {
+				errs = append(errs, &modelAPIV1.LogError{
+					Error:   err,
+					Message: fmt.Sprintf("Failed to extract metric names from variable for the dashboard '%s/%s'", currentDashboard.Metadata.Project, currentDashboard.Metadata.Name),
+				})
+				continue
+			}
 		}
 		result = utils.Merge(result, metrics)
+		invalidMetricsResult = utils.Merge(invalidMetricsResult, invalidMetrics)
 	}
-	return result, errs
+	return result, invalidMetricsResult, errs
 }
 
 func replaceVariables(expr string) string {

@@ -28,6 +28,7 @@ import (
 	"github.com/perses/metrics-usage/pkg/analyze/grafana"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/pkg/client"
+	"github.com/perses/metrics-usage/usageclient"
 	"github.com/perses/metrics-usage/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -52,19 +53,22 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.Simp
 		Client:   httpClient,
 	}
 	grafanaClient := grafanaapi.NewHTTPClientWithConfig(strfmt.Default, transportConfig)
+	logger := logrus.StandardLogger().WithField("collector", "grafana")
 	return &grafanaCollector{
-		db:                db,
-		grafanaURL:        url.String(),
-		grafanaClient:     grafanaClient,
-		metricUsageClient: metricUsageClient,
-		logger:            logrus.StandardLogger().WithField("collector", "grafana"),
+		grafanaURL:    url.String(),
+		grafanaClient: grafanaClient,
+		metricUsageClient: &usageclient.Client{
+			DB:                db,
+			MetricUsageClient: metricUsageClient,
+			Logger:            logger,
+		},
+		logger: logrus.StandardLogger().WithField("collector", "grafana"),
 	}, nil
 }
 
 type grafanaCollector struct {
 	async.SimpleTask
-	db                database.Database
-	metricUsageClient client.Client
+	metricUsageClient *usageclient.Client
 	grafanaURL        string
 	grafanaClient     *grafanaapi.GrafanaHTTPAPI
 	logger            *logrus.Entry
@@ -93,17 +97,7 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 		invalidMetricsUsage := c.generateUsage(invalidMetrics, dashboard)
 		c.logger.Infof("%d metrics usage has been collected for the dashboard %q with UID %q", len(metricUsage), h.Title, h.UID)
 		c.logger.Infof("%d metrics containing regexp or variable has been collected for the dashboard %q with UID %q", len(invalidMetricsUsage), h.Title, h.UID)
-		if len(metricUsage) > 0 {
-			if c.metricUsageClient != nil {
-				// In this case, that means we have to send the data to a remote server.
-				if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
-					c.logger.WithError(sendErr).Error("Failed to send usage metric")
-				}
-			} else {
-				c.db.EnqueueUsage(metricUsage)
-				c.db.EnqueueInvalidMetricsUsage(invalidMetricsUsage)
-			}
-		}
+		c.metricUsageClient.SendUsage(metricUsage, invalidMetricsUsage)
 	}
 	return nil
 }

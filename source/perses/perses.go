@@ -23,6 +23,7 @@ import (
 	"github.com/perses/metrics-usage/pkg/analyze/perses"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/pkg/client"
+	"github.com/perses/metrics-usage/usageclient"
 	"github.com/perses/metrics-usage/utils"
 	persesClientV1 "github.com/perses/perses/pkg/client/api/v1"
 	persesClientConfig "github.com/perses/perses/pkg/client/config"
@@ -42,21 +43,24 @@ func NewCollector(db database.Database, cfg config.PersesCollector) (async.Simpl
 			return nil, err
 		}
 	}
+	logger := logrus.StandardLogger().WithField("collector", "perses")
 	return &persesCollector{
-		SimpleTask:        nil,
-		persesClient:      persesClientV1.NewWithClient(restClient).Dashboard(""),
-		db:                db,
-		metricUsageClient: metricUsageClient,
-		persesURL:         cfg.HTTPClient.URL.String(),
-		logger:            logrus.StandardLogger().WithField("collector", "perses"),
+		SimpleTask:   nil,
+		persesClient: persesClientV1.NewWithClient(restClient).Dashboard(""),
+		metricUsageClient: &usageclient.Client{
+			DB:                db,
+			MetricUsageClient: metricUsageClient,
+			Logger:            logger,
+		},
+		persesURL: cfg.HTTPClient.URL.String(),
+		logger:    logger,
 	}, nil
 }
 
 type persesCollector struct {
 	async.SimpleTask
 	persesClient      persesClientV1.DashboardInterface
-	db                database.Database
-	metricUsageClient client.Client
+	metricUsageClient *usageclient.Client
 	persesURL         string
 	logger            *logrus.Entry
 }
@@ -69,22 +73,15 @@ func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error
 	}
 
 	for _, dash := range dashboards {
-		metrics, errs := perses.Analyze(dash)
+		metrics, invalidMetrics, errs := perses.Analyze(dash)
 		for _, logErr := range errs {
 			logErr.Log(c.logger)
 		}
 		metricUsage := c.generateUsage(metrics, dash)
+		invalidMetricUsage := c.generateUsage(invalidMetrics, dash)
 		c.logger.Infof("%d metrics usage has been collected for the dashboard %s/%s", len(metricUsage), dash.Metadata.Project, dash.Metadata.Name)
-		if len(metricUsage) > 0 {
-			if c.metricUsageClient != nil {
-				// In this case, that means we have to send the data to a remote server.
-				if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
-					c.logger.WithError(sendErr).Error("Failed to send usage metric")
-				}
-			} else {
-				c.db.EnqueueUsage(metricUsage)
-			}
-		}
+		c.logger.Infof("%d metrics containing regexp or variable has been collected for the dashboard %s/%s", len(invalidMetricUsage), dash.Metadata.Project, dash.Metadata.Name)
+		c.metricUsageClient.SendUsage(metricUsage, invalidMetricUsage)
 	}
 	return nil
 }

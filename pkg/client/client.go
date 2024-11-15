@@ -27,6 +27,7 @@ import (
 
 type Client interface {
 	Usage(map[string]*modelAPIV1.MetricUsage) error
+	InvalidMetricsUsage(metrics map[string]*modelAPIV1.MetricUsage) error
 	Labels(map[string][]string) error
 }
 

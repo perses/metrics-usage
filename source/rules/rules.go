@@ -22,6 +22,7 @@ import (
 	"github.com/perses/metrics-usage/database"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	"github.com/perses/metrics-usage/pkg/client"
+	"github.com/perses/metrics-usage/usageclient"
 	promUtils "github.com/perses/metrics-usage/utils/prometheus"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
@@ -39,21 +40,24 @@ func NewCollector(db database.Database, cfg *config.RulesCollector) (async.Simpl
 			return nil, err
 		}
 	}
+	logger := logrus.StandardLogger().WithField("collector", "rules")
 	return &rulesCollector{
-		promClient:        promClient,
-		db:                db,
-		metricUsageClient: metricUsageClient,
-		promURL:           cfg.HTTPClient.URL.String(),
-		logger:            logrus.StandardLogger().WithField("collector", "rules"),
-		retry:             cfg.RetryToGetRules,
+		promClient: promClient,
+		metricUsageClient: &usageclient.Client{
+			DB:                db,
+			MetricUsageClient: metricUsageClient,
+			Logger:            logger,
+		},
+		promURL: cfg.HTTPClient.URL.String(),
+		logger:  logger,
+		retry:   cfg.RetryToGetRules,
 	}, nil
 }
 
 type rulesCollector struct {
 	async.SimpleTask
 	promClient        v1.API
-	db                database.Database
-	metricUsageClient client.Client
+	metricUsageClient *usageclient.Client
 	promURL           string
 	logger            *logrus.Entry
 	retry             uint
@@ -65,20 +69,13 @@ func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 		c.logger.WithError(err).Error("Failed to get rules")
 		return nil
 	}
-	metricUsage, errs := prometheus.Analyze(result.Groups, c.promURL)
+	metricsUsage, invalidMetricsUsage, errs := prometheus.Analyze(result.Groups, c.promURL)
 	for _, logErr := range errs {
 		logErr.Log(c.logger)
 	}
-	if len(metricUsage) > 0 {
-		if c.metricUsageClient != nil {
-			// In this case, that means we have to send the data to a remote server.
-			if sendErr := c.metricUsageClient.Usage(metricUsage); sendErr != nil {
-				c.logger.WithError(sendErr).Error("Failed to send usage metric")
-			}
-		} else {
-			c.db.EnqueueUsage(metricUsage)
-		}
-	}
+	c.logger.Infof("%d metrics usage has been collected", len(metricsUsage))
+	c.logger.Infof("%d metrics containing regexp or variable has been collected", len(invalidMetricsUsage))
+	c.metricUsageClient.SendUsage(metricsUsage, invalidMetricsUsage)
 	return nil
 }
 
