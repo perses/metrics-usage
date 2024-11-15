@@ -148,18 +148,19 @@ var (
 
 func Analyze(dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
 	staticVariables := strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(extractStaticVariables(dashboard.Templating.List))...)
-	m1, inv1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, dashboard)
+	allVariableNames := collectAllVariableName(dashboard.Templating.List)
+	m1, inv1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, allVariableNames, dashboard)
 	for _, r := range dashboard.Rows {
-		m2, inv2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, dashboard)
+		m2, inv2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, allVariableNames, dashboard)
 		m1 = utils.Merge(m1, m2)
 		inv1 = utils.Merge(inv1, inv2)
 		err1 = append(err1, err2...)
 	}
-	m3, inv3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, dashboard)
+	m3, inv3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, allVariableNames, dashboard)
 	return utils.Merge(m1, m3), utils.Merge(inv1, inv3), append(err1, err3...)
 }
 
-func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
+func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames []string, dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	var result []string
 	var invalidMetricsResult []string
@@ -177,7 +178,7 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 						if prometheus.IsValidMetricName(m) {
 							result = utils.InsertIfNotPresent(result, m)
 						} else {
-							invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, m)
+							invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, formatVariableInMetricName(m, allVariableNames))
 						}
 					}
 				} else {
@@ -195,7 +196,7 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 	return result, invalidMetricsResult, errs
 }
 
-func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
+func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames []string, dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	var result []string
 	var invalidMetricsResult []string
@@ -237,7 +238,7 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 					if prometheus.IsValidMetricName(m) {
 						result = utils.InsertIfNotPresent(result, m)
 					} else {
-						invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, m)
+						invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, formatVariableInMetricName(m, allVariableNames))
 					}
 				}
 			} else {
@@ -272,12 +273,29 @@ func extractStaticVariables(variables []templateVar) map[string]string {
 	return result
 }
 
+func collectAllVariableName(variables []templateVar) []string {
+	result := make([]string, len(variables))
+	for i, v := range variables {
+		result[i] = v.Name
+	}
+	return result
+}
+
 func replaceVariables(expr string, staticVariables *strings.Replacer) string {
 	newExpr := staticVariables.Replace(expr)
 	newExpr = variableReplacer.Replace(newExpr)
 	newExpr = variableRangeQueryRangeRegex.ReplaceAllLiteralString(newExpr, `[5m]`)
 	newExpr = variableSubqueryRangeRegex.ReplaceAllLiteralString(newExpr, `[5m:1m]`)
 	return newExpr
+}
+
+// formatVariableInMetricName will replace the syntax of the variable by another one that can actually be parsed.
+// It will be useful for later when we want to know which metrics, this metric with variable is covered.
+func formatVariableInMetricName(metric string, variables []string) string {
+	for _, v := range variables {
+		metric = strings.Replace(metric, fmt.Sprintf("$%s", v), fmt.Sprintf("${%s}", v), -1)
+	}
+	return metric
 }
 
 func generateGrafanaVariableSyntaxReplacer(variables map[string]string) []string {
