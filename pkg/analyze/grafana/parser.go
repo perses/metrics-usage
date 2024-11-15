@@ -35,7 +35,7 @@ func (p *parser) parse(expr string) []string {
 			p.currentMetric += string(char)
 			continue
 		}
-		if char == '(' || char == ')' {
+		if char == '(' || char == ')' || char == '"' || char == '=' || char == '!' || char == ',' {
 			// then it was not a metric name and we need to drop it
 			p.currentMetric = ""
 			continue

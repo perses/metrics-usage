@@ -4,14 +4,14 @@ go 1.23.1
 
 require (
 	github.com/go-openapi/strfmt v0.23.0
-	github.com/grafana/grafana-openapi-client-go v0.0.0-20241101140420-bc381928ae6e
+	github.com/grafana/grafana-openapi-client-go v0.0.0-20241113095943-9cb2bbfeb8a3
 	github.com/labstack/echo/v4 v4.12.0
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.26.0
 	github.com/perses/perses v0.49.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/prometheus/common v0.60.1
-	github.com/prometheus/prometheus v0.300.0-rc.1
+	github.com/prometheus/prometheus v0.300.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/oauth2 v0.24.0
