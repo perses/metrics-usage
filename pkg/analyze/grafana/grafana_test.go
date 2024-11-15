@@ -33,10 +33,11 @@ func unmarshalDashboard(path string) (*SimplifiedDashboard, error) {
 
 func TestAnalyze(t *testing.T) {
 	tests := []struct {
-		name          string
-		dashboardFile string
-		resultMetrics []string
-		resultErrs    []*modelAPIV1.LogError
+		name           string
+		dashboardFile  string
+		resultMetrics  []string
+		invalidMetrics []string
+		resultErrs     []*modelAPIV1.LogError
 	}{
 		{
 			name:          "from/to variables",
@@ -53,6 +54,65 @@ func TestAnalyze(t *testing.T) {
 			dashboardFile: "tests/d3.json",
 			resultMetrics: []string{"probe_success"},
 		},
+		{
+			name:          "variable in metrics",
+			dashboardFile: "tests/d4.json",
+			resultMetrics: []string{
+				"otelcol_process_memory_rss",
+				"otelcol_rpc_client_request_size_bucket",
+				"otelcol_rpc_server_request_size_bucket",
+				"otelcol_rpc_client_duration_bucket",
+				"otelcol_rpc_server_duration_bucket",
+				"otelcol_rpc_client_responses_per_rpc_count",
+				"otelcol_rpc_server_responses_per_rpc_count",
+				"otelcol_process_runtime_heap_alloc_bytes",
+				"otelcol_process_runtime_total_sys_memory_bytes",
+				"otelcol_exporter_queue_size",
+				"otelcol_exporter_queue_capacity",
+				"otelcol_processor_batch_batch_send_size_sum",
+				"otelcol_processor_batch_batch_send_size_count",
+				"otelcol_processor_batch_batch_send_size_bucket",
+			},
+			invalidMetrics: []string{
+				"otelcol_process_uptime.+",
+				"otelcol_exporter_.+",
+				"otelcol_processor_.+",
+				"otelcol_receiver_.+",
+				"otelcol_receiver_accepted_spans${suffix}",
+				"otelcol_receiver_refused_spans${suffix}",
+				"otelcol_receiver_accepted_metric_points${suffix}",
+				"otelcol_receiver_refused_metric_points${suffix}",
+				"otelcol_receiver_accepted_log_records${suffix}",
+				"otelcol_receiver_refused_log_records${suffix}",
+				"otelcol_processor_accepted_spans${suffix}",
+				"otelcol_processor_refused_spans${suffix}",
+				"otelcol_processor_dropped_spans${suffix}",
+				"otelcol_processor_accepted_metric_points${suffix}",
+				"otelcol_processor_refused_metric_points${suffix}",
+				"otelcol_processor_dropped_metric_points${suffix}",
+				"otelcol_processor_accepted_log_records${suffix}",
+				"otelcol_processor_refused_log_records${suffix}",
+				"otelcol_processor_dropped_log_records${suffix}",
+				"otelcol_processor_batch_batch_size_trigger_send${suffix}",
+				"otelcol_processor_batch_timeout_trigger_send${suffix}",
+				"otelcol_exporter_sent_spans${suffix}",
+				"otelcol_exporter_enqueue_failed_spans${suffix}",
+				"otelcol_exporter_send_failed_spans${suffix}",
+				"otelcol_exporter_sent_metric_points${suffix}",
+				"otelcol_exporter_enqueue_failed_metric_points${suffix}",
+				"otelcol_exporter_send_failed_metric_points${suffix}",
+				"otelcol_exporter_sent_log_records${suffix}",
+				"otelcol_exporter_enqueue_failed_log_records${suffix}",
+				"otelcol_exporter_send_failed_log_records${suffix}",
+				"otelcol_process_cpu_seconds${suffix}",
+				"otelcol_process_uptime${suffix}",
+				"otelcol_otelsvc_k8s_namespace_added${suffix}",
+				"otelcol_otelsvc_k8s_namespace_updated${suffix}",
+				"otelcol_otelsvc_k8s_pod_added${suffix}",
+				"otelcol_otelsvc_k8s_pod_updated${suffix}",
+				"otelcol_otelsvc_k8s_pod_deleted${suffix}",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -60,8 +120,9 @@ func TestAnalyze(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			metrics, errs := Analyze(dashboard)
+			metrics, invalidMetrics, errs := Analyze(dashboard)
 			assert.Equal(t, tt.resultMetrics, metrics)
+			assert.Equal(t, tt.invalidMetrics, invalidMetrics)
 			assert.Equal(t, tt.resultErrs, errs)
 		})
 	}

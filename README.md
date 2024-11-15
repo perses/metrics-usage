@@ -6,7 +6,12 @@ Metrics Usage
 
 This tool analyzes static files - like dashboards and Prometheus alert rules - to track where and how Prometheus metrics are used.
 
-It’s especially helpful for identifying whether metrics are actively used. Unused metrics should ideally not be scraped by Prometheus to avoid unnecessary load.
+It’s especially helpful for identifying whether metrics are actively used.
+Prometheus should ideally not scrape unused metrics to avoid an unnecessary load.
+
+## API exposed
+
+### Metrics
 
 The tool provides an API endpoint, `/api/v1/metrics`, which returns the usage data for each collected metric as shown below:
 
@@ -77,7 +82,41 @@ You can used the following query parameter to filter the list returned:
 * **metric_name**: when used, it will trigger a fuzzy search on the metric_name based on the pattern provided.
 * **used**: when used, will return only the metric used or not (depending if you set this boolean to true or to false). Leave it empty if you want both.
 
-## How to use it
+### Invalid Metrics
+
+The API endpoint `/api/v1/invalid_metrics` is exposing the usage for metrics that contains variable or regexp. 
+
+```json
+{
+  "node_cpu_utilization_${instance}": {
+    "usage": {
+      "alertRules": [
+        {
+          "prom_link": "https://prometheus.demo.do.prometheus.io",
+          "group_name": "ansible managed alert rules",
+          "name": "NodeCPUUtilizationHigh",
+          "expression": "instance:node_cpu_utilisation:rate5m * 100 > ignoring (severity) node_cpu_utilization_percent_threshold{severity=\"critical\"}"
+        }
+      ]
+    }
+  },
+  "node_disk_discard_time_.+": {
+    "usage": {
+      "dashboards": [
+        "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull"
+      ]
+    }
+  }
+}
+```
+
+### Pending Usage
+
+The API endpoint `/api/v1/pending_usages` is exposing usage associated to metrics that has not yet been associated to the metrics available on the endpoint `/api/v1/metrics`. 
+
+It's even possible usage is never associated as the metric doesn't exist anymore.
+
+## Different way to deploy it
 
 ### Central instance
 

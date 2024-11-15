@@ -15,6 +15,7 @@ package prometheus
 
 import (
 	"fmt"
+	"regexp"
 
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/utils"
@@ -23,6 +24,8 @@ import (
 	"github.com/prometheus/prometheus/promql/parser"
 )
 
+var validMetricName = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
+
 func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.MetricUsage, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
@@ -30,7 +33,7 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 		for _, rule := range ruleGroup.Rules {
 			switch v := rule.(type) {
 			case v1.RecordingRule:
-				metricNames, parserErr := AnalyzePromQLExpression(v.Query)
+				metricNames, _, parserErr := AnalyzePromQLExpression(v.Query)
 				if parserErr != nil {
 					errs = append(errs, &modelAPIV1.LogError{
 						Message: fmt.Sprintf("Failed to extract metric name for the ruleGroup %q and the recordingRule %q", ruleGroup.Name, v.Name),
@@ -49,7 +52,7 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 					false,
 				)
 			case v1.AlertingRule:
-				metricNames, parserErr := AnalyzePromQLExpression(v.Query)
+				metricNames, _, parserErr := AnalyzePromQLExpression(v.Query)
 				if parserErr != nil {
 					errs = append(errs, &modelAPIV1.LogError{
 						Message: fmt.Sprintf("Failed to extract metric name for the ruleGroup %q and the alertingRule %q", ruleGroup.Name, v.Name),
@@ -77,12 +80,15 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 	return metricUsage, errs
 }
 
-func AnalyzePromQLExpression(query string) ([]string, error) {
+// AnalyzePromQLExpression is returning a list of valid metric names extracted from the PromQL expression.
+// It also returned a list of invalid metric names that likely look like a regexp.
+func AnalyzePromQLExpression(query string) ([]string, []string, error) {
 	expr, err := parser.ParseExpr(query)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	var result []string
+	var metricNames []string
+	var invalidMetricNames []string
 	parser.Inspect(expr, func(node parser.Node, _ []parser.Node) error {
 		if n, ok := node.(*parser.VectorSelector); ok {
 			// The metric name is only present when the node is a VectorSelector.
@@ -90,19 +96,28 @@ func AnalyzePromQLExpression(query string) ([]string, error) {
 			// Otherwise, we need to look at the labelName __name__ to find it.
 			// Note: we will need to change this rule with Prometheus 3.0
 			if n.Name != "" {
-				result = append(result, n.Name)
+				metricNames = append(metricNames, n.Name)
 				return nil
 			}
 			for _, m := range n.LabelMatchers {
 				if m.Name == labels.MetricName {
-					result = append(result, m.Value)
+					if IsValidMetricName(m.Value) {
+						metricNames = append(metricNames, m.Value)
+					} else {
+						invalidMetricNames = append(invalidMetricNames, m.Value)
+					}
+
 					return nil
 				}
 			}
 		}
 		return nil
 	})
-	return result, nil
+	return metricNames, invalidMetricNames, nil
+}
+
+func IsValidMetricName(name string) bool {
+	return validMetricName.MatchString(name)
 }
 
 func populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames []string, item modelAPIV1.RuleUsage, isAlertingRules bool) {

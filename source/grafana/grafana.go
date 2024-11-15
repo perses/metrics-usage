@@ -85,12 +85,14 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 			continue
 		}
 		c.logger.Debugf("extracting metrics for the dashboard %s with UID %q", h.Title, h.UID)
-		metrics, errs := grafana.Analyze(dashboard)
+		metrics, invalidMetrics, errs := grafana.Analyze(dashboard)
 		for _, logErr := range errs {
 			logErr.Log(c.logger)
 		}
 		metricUsage := c.generateUsage(metrics, dashboard)
+		invalidMetricsUsage := c.generateUsage(invalidMetrics, dashboard)
 		c.logger.Infof("%d metrics usage has been collected for the dashboard %q with UID %q", len(metricUsage), h.Title, h.UID)
+		c.logger.Infof("%d metrics containing regexp or variable has been collected for the dashboard %q with UID %q", len(invalidMetricsUsage), h.Title, h.UID)
 		if len(metricUsage) > 0 {
 			if c.metricUsageClient != nil {
 				// In this case, that means we have to send the data to a remote server.
@@ -99,6 +101,7 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 				}
 			} else {
 				c.db.EnqueueUsage(metricUsage)
+				c.db.EnqueueInvalidMetricsUsage(invalidMetricsUsage)
 			}
 		}
 	}

@@ -7,7 +7,7 @@ import (
 )
 
 func TestAnalyzePromQLExpression(t *testing.T) {
-	result, err := AnalyzePromQLExpression("service_status{env=~\"$env\",region=~\"$region\"}")
+	result, _, err := AnalyzePromQLExpression("service_status{env=~\"$env\",region=~\"$region\"}")
 	assert.NoError(t, err)
 	assert.Equal(t, []string{"service_status"}, result)
 }

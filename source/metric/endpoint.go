@@ -39,6 +39,10 @@ func (e *endpoint) RegisterRoute(ech *echo.Echo) {
 	ech.POST(path, e.PushMetricsUsage)
 	ech.GET(path, e.ListMetrics)
 	ech.GET(fmt.Sprintf("%s/:id", path), e.GetMetric)
+
+	ech.POST("/api/v1/invalid_metrics", e.PushMetricsUsage)
+	ech.GET("/api/v1/invalid_metrics", e.ListInvalidMetrics)
+	ech.GET("/api/v1/pending_usages", e.ListPendingUsages)
 }
 
 func (e *endpoint) GetMetric(ctx echo.Context) error {
@@ -90,4 +94,21 @@ func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
 	}
 	e.db.EnqueueUsage(data)
 	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
+}
+
+func (e *endpoint) ListInvalidMetrics(ctx echo.Context) error {
+	return ctx.JSON(http.StatusOK, e.db.ListInvalidMetrics())
+}
+
+func (e *endpoint) PushInvalidMetricsUsage(ctx echo.Context) error {
+	data := make(map[string]*v1.MetricUsage)
+	if err := ctx.Bind(&data); err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+	}
+	e.db.EnqueueInvalidMetricsUsage(data)
+	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
+}
+
+func (e *endpoint) ListPendingUsages(ctx echo.Context) error {
+	return ctx.JSON(http.StatusOK, e.db.ListPendingUsage())
 }
