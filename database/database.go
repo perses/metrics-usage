@@ -21,7 +21,6 @@ import (
 
 	"github.com/perses/metrics-usage/config"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
-	"github.com/perses/metrics-usage/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -145,7 +144,9 @@ func (d *db) watchMetricsQueue() {
 		for _, metricName := range metricsName {
 			if _, ok := d.metrics[metricName]; !ok {
 				// As this queue only serves the purpose of storing missing metrics, we are only looking for the one not already present in the database.
-				d.metrics[metricName] = &v1.Metric{}
+				d.metrics[metricName] = &v1.Metric{
+					Labels: make(v1.Set[string]),
+				}
 				// Since it's a new metric, potentially we already have a usage stored in the buffer.
 				if usage, usageExists := d.usage[metricName]; usageExists {
 					// TODO at some point we need to erase the usage map because it will cause a memory leak
@@ -204,10 +205,14 @@ func (d *db) watchLabelsQueue() {
 			if _, ok := d.metrics[metricName]; !ok {
 				// In this case, we should add the metric, because it means the metrics has been found from another source.
 				d.metrics[metricName] = &v1.Metric{
-					Labels: labels,
+					Labels: v1.NewSet(labels...),
 				}
 			} else {
-				d.metrics[metricName].Labels = utils.Merge(d.metrics[metricName].Labels, labels)
+				if d.metrics[metricName].Labels == nil {
+					d.metrics[metricName].Labels = v1.NewSet(labels...)
+				} else {
+					d.metrics[metricName].Labels.Add(labels...)
+				}
 			}
 		}
 		d.metricsMutex.Unlock()
@@ -249,9 +254,8 @@ func mergeUsage(old, new *v1.MetricUsage) *v1.MetricUsage {
 	if new == nil {
 		return old
 	}
-	return &v1.MetricUsage{
-		Dashboards:     utils.Merge(old.Dashboards, new.Dashboards),
-		RecordingRules: utils.Merge(old.RecordingRules, new.RecordingRules),
-		AlertRules:     utils.Merge(old.AlertRules, new.AlertRules),
-	}
+	old.Dashboards.Merge(new.Dashboards)
+	old.AlertRules.Merge(new.AlertRules)
+	old.RecordingRules.Merge(new.RecordingRules)
+	return old
 }

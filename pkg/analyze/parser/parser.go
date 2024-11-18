@@ -13,17 +13,21 @@
 
 package parser
 
-func ExtractMetricNameWithVariable(expr string) []string {
-	p := &parser{}
+import modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+
+func ExtractMetricNameWithVariable(expr string) modelAPIV1.Set[string] {
+	p := &parser{
+		metrics: modelAPIV1.Set[string]{},
+	}
 	return p.parse(expr)
 }
 
 type parser struct {
-	metrics       []string
+	metrics       modelAPIV1.Set[string]
 	currentMetric string
 }
 
-func (p *parser) parse(expr string) []string {
+func (p *parser) parse(expr string) modelAPIV1.Set[string] {
 	query := []rune(expr)
 	for i := 0; i < len(query); i++ {
 		char := query[i]
@@ -64,7 +68,7 @@ func (p *parser) parse(expr string) []string {
 		if char == '{' {
 			if len(p.currentMetric) > 0 {
 				// That means we reached the end of a metric, so we can save it
-				p.metrics = append(p.metrics, p.currentMetric)
+				p.metrics.Add(p.currentMetric)
 				p.currentMetric = ""
 			}
 		}

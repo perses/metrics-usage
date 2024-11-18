@@ -29,7 +29,6 @@ import (
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/pkg/client"
 	"github.com/perses/metrics-usage/usageclient"
-	"github.com/perses/metrics-usage/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -140,15 +139,15 @@ func (c *grafanaCollector) collectAllDashboardUID(ctx context.Context) ([]*grafa
 	return result, nil
 }
 
-func (c *grafanaCollector) generateUsage(metricNames []string, currentDashboard *grafana.SimplifiedDashboard) map[string]*modelAPIV1.MetricUsage {
+func (c *grafanaCollector) generateUsage(metricNames modelAPIV1.Set[string], currentDashboard *grafana.SimplifiedDashboard) map[string]*modelAPIV1.MetricUsage {
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	dashboardURL := fmt.Sprintf("%s/d/%s", c.grafanaURL, currentDashboard.UID)
-	for _, metricName := range metricNames {
+	for metricName := range metricNames {
 		if usage, ok := metricUsage[metricName]; ok {
-			usage.Dashboards = utils.InsertIfNotPresent(usage.Dashboards, dashboardURL)
+			usage.Dashboards.Add(dashboardURL)
 		} else {
 			metricUsage[metricName] = &modelAPIV1.MetricUsage{
-				Dashboards: []string{dashboardURL},
+				Dashboards: modelAPIV1.NewSet(dashboardURL),
 			}
 		}
 	}

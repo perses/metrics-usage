@@ -21,7 +21,6 @@ import (
 	"github.com/perses/metrics-usage/pkg/analyze/parser"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
-	"github.com/perses/metrics-usage/utils"
 	"github.com/perses/perses/go-sdk/prometheus/query"
 	"github.com/perses/perses/go-sdk/prometheus/variable/promql"
 	v1 "github.com/perses/perses/pkg/model/api/v1"
@@ -41,16 +40,18 @@ var variableReplacer = strings.NewReplacer(
 	"$__project", "perses",
 )
 
-func Analyze(dashboard *v1.Dashboard) ([]string, []string, []*modelAPIV1.LogError) {
+func Analyze(dashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	m1, inv1, err1 := extractMetricUsageFromVariables(dashboard.Spec.Variables, dashboard)
 	m2, inv2, err2 := extractMetricUsageFromPanels(dashboard.Spec.Panels, dashboard)
-	return utils.Merge(m1, m2), utils.Merge(inv1, inv2), append(err1, err2...)
+	m1.Merge(m2)
+	inv1.Merge(inv2)
+	return m1, inv1, append(err1, err2...)
 }
 
-func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard) ([]string, []string, []*modelAPIV1.LogError) {
+func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
-	var result []string
-	var invalidMetricsResult []string
+	result := modelAPIV1.Set[string]{}
+	invalidMetricsResult := modelAPIV1.Set[string]{}
 	for panelName, panel := range panels {
 		for i, q := range panel.Spec.Queries {
 			if q.Spec.Plugin.Kind != query.PluginKind {
@@ -73,11 +74,11 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 			if err != nil {
 				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 				if len(otherMetrics) > 0 {
-					for _, m := range otherMetrics {
+					for m := range otherMetrics {
 						if prometheus.IsValidMetricName(m) {
-							result = utils.InsertIfNotPresent(result, m)
+							result.Add(m)
 						} else {
-							invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, m)
+							invalidMetricsResult.Add(m)
 						}
 					}
 				} else {
@@ -88,17 +89,17 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 					continue
 				}
 			}
-			result = utils.Merge(result, metrics)
-			invalidMetricsResult = utils.Merge(invalidMetricsResult, invalidMetrics)
+			result.Merge(metrics)
+			invalidMetricsResult.Merge(invalidMetrics)
 		}
 	}
 	return result, invalidMetricsResult, errs
 }
 
-func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard) ([]string, []string, []*modelAPIV1.LogError) {
+func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
-	var result []string
-	var invalidMetricsResult []string
+	result := modelAPIV1.Set[string]{}
+	invalidMetricsResult := modelAPIV1.Set[string]{}
 	for _, v := range variables {
 		if v.Kind != variable.KindList {
 			continue
@@ -127,11 +128,11 @@ func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDash
 		if err != nil {
 			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 			if len(otherMetrics) > 0 {
-				for _, m := range otherMetrics {
+				for m := range otherMetrics {
 					if prometheus.IsValidMetricName(m) {
-						result = utils.InsertIfNotPresent(result, m)
+						result.Add(m)
 					} else {
-						invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, m)
+						invalidMetricsResult.Add(m)
 					}
 				}
 			} else {
@@ -142,8 +143,8 @@ func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDash
 				continue
 			}
 		}
-		result = utils.Merge(result, metrics)
-		invalidMetricsResult = utils.Merge(invalidMetricsResult, invalidMetrics)
+		result.Merge(metrics)
+		invalidMetricsResult.Merge(invalidMetrics)
 	}
 	return result, invalidMetricsResult, errs
 }

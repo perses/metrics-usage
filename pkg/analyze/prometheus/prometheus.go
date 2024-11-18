@@ -18,7 +18,6 @@ import (
 	"regexp"
 
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
-	"github.com/perses/metrics-usage/utils"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/prometheus/model/labels"
 	"github.com/prometheus/prometheus/promql/parser"
@@ -103,13 +102,13 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 
 // AnalyzePromQLExpression is returning a list of valid metric names extracted from the PromQL expression.
 // It also returned a list of invalid metric names that likely look like a regexp.
-func AnalyzePromQLExpression(query string) ([]string, []string, error) {
+func AnalyzePromQLExpression(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
 	expr, err := parser.ParseExpr(query)
 	if err != nil {
 		return nil, nil, err
 	}
-	var metricNames []string
-	var invalidMetricNames []string
+	metricNames := modelAPIV1.Set[string]{}
+	invalidMetricNames := modelAPIV1.Set[string]{}
 	parser.Inspect(expr, func(node parser.Node, _ []parser.Node) error {
 		if n, ok := node.(*parser.VectorSelector); ok {
 			// The metric name is only present when the node is a VectorSelector.
@@ -117,15 +116,15 @@ func AnalyzePromQLExpression(query string) ([]string, []string, error) {
 			// Otherwise, we need to look at the labelName __name__ to find it.
 			// Note: we will need to change this rule with Prometheus 3.0
 			if n.Name != "" {
-				metricNames = append(metricNames, n.Name)
+				metricNames.Add(n.Name)
 				return nil
 			}
 			for _, m := range n.LabelMatchers {
 				if m.Name == labels.MetricName {
 					if IsValidMetricName(m.Value) {
-						metricNames = append(metricNames, m.Value)
+						metricNames.Add(m.Value)
 					} else {
-						invalidMetricNames = append(invalidMetricNames, m.Value)
+						invalidMetricNames.Add(m.Value)
 					}
 
 					return nil
@@ -141,20 +140,22 @@ func IsValidMetricName(name string) bool {
 	return validMetricName.MatchString(name)
 }
 
-func populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames []string, item modelAPIV1.RuleUsage, isAlertingRules bool) {
-	for _, metricName := range metricNames {
+func populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames modelAPIV1.Set[string], item modelAPIV1.RuleUsage, isAlertingRules bool) {
+	for metricName := range metricNames {
 		if usage, ok := metricUsage[metricName]; ok {
 			if isAlertingRules {
-				usage.AlertRules = utils.InsertIfNotPresent(usage.AlertRules, item)
+				usage.AlertRules.Add(item)
 			} else {
-				usage.RecordingRules = utils.InsertIfNotPresent(usage.RecordingRules, item)
+				usage.RecordingRules.Add(item)
 			}
 		} else {
 			u := &modelAPIV1.MetricUsage{}
 			if isAlertingRules {
-				u.AlertRules = []modelAPIV1.RuleUsage{item}
+				u.AlertRules = modelAPIV1.NewSet(item)
+				u.RecordingRules = modelAPIV1.NewSet[modelAPIV1.RuleUsage]()
 			} else {
-				u.RecordingRules = []modelAPIV1.RuleUsage{item}
+				u.RecordingRules = modelAPIV1.NewSet(item)
+				u.AlertRules = modelAPIV1.NewSet[modelAPIV1.RuleUsage]()
 			}
 			metricUsage[metricName] = u
 		}

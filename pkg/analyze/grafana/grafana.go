@@ -21,7 +21,6 @@ import (
 	"github.com/perses/metrics-usage/pkg/analyze/parser"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
-	"github.com/perses/metrics-usage/utils"
 )
 
 type variableTuple struct {
@@ -146,24 +145,26 @@ var (
 	variableReplacer = strings.NewReplacer(generateGrafanaTupleVariableSyntaxReplacer(globalVariableList)...)
 )
 
-func Analyze(dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
+func Analyze(dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	staticVariables := strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(extractStaticVariables(dashboard.Templating.List))...)
 	allVariableNames := collectAllVariableName(dashboard.Templating.List)
 	m1, inv1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, allVariableNames, dashboard)
 	for _, r := range dashboard.Rows {
 		m2, inv2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, allVariableNames, dashboard)
-		m1 = utils.Merge(m1, m2)
-		inv1 = utils.Merge(inv1, inv2)
+		m1.Merge(m2)
+		inv1.Merge(inv2)
 		err1 = append(err1, err2...)
 	}
 	m3, inv3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, allVariableNames, dashboard)
-	return utils.Merge(m1, m3), utils.Merge(inv1, inv3), append(err1, err3...)
+	m1.Merge(m3)
+	inv1.Merge(inv3)
+	return m1, inv1, append(err1, err3...)
 }
 
-func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames []string, dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
+func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
-	var result []string
-	var invalidMetricsResult []string
+	result := modelAPIV1.Set[string]{}
+	invalidMetricsResult := modelAPIV1.Set[string]{}
 	for _, p := range panels {
 		for _, t := range extractTarget(p) {
 			if len(t.Expr) == 0 {
@@ -174,11 +175,11 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 			if err != nil {
 				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 				if len(otherMetrics) > 0 {
-					for _, m := range otherMetrics {
+					for m := range otherMetrics {
 						if prometheus.IsValidMetricName(m) {
-							result = utils.InsertIfNotPresent(result, m)
+							result.Add(m)
 						} else {
-							invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, formatVariableInMetricName(m, allVariableNames))
+							invalidMetricsResult.Add(formatVariableInMetricName(m, allVariableNames))
 						}
 					}
 				} else {
@@ -188,18 +189,18 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 					})
 				}
 			} else {
-				result = utils.Merge(result, metrics)
-				invalidMetricsResult = utils.Merge(invalidMetricsResult, invalidMetrics)
+				result.Merge(metrics)
+				invalidMetricsResult.Merge(invalidMetrics)
 			}
 		}
 	}
 	return result, invalidMetricsResult, errs
 }
 
-func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames []string, dashboard *SimplifiedDashboard) ([]string, []string, []*modelAPIV1.LogError) {
+func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
-	var result []string
-	var invalidMetricsResult []string
+	result := modelAPIV1.Set[string]{}
+	invalidMetricsResult := modelAPIV1.Set[string]{}
 	for _, v := range variables {
 		if v.Type != "query" {
 			continue
@@ -234,11 +235,11 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 		if err != nil {
 			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 			if len(otherMetrics) > 0 {
-				for _, m := range otherMetrics {
+				for m := range otherMetrics {
 					if prometheus.IsValidMetricName(m) {
-						result = utils.InsertIfNotPresent(result, m)
+						result.Add(m)
 					} else {
-						invalidMetricsResult = utils.InsertIfNotPresent(invalidMetricsResult, formatVariableInMetricName(m, allVariableNames))
+						invalidMetricsResult.Add(formatVariableInMetricName(m, allVariableNames))
 					}
 				}
 			} else {
@@ -248,8 +249,8 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 				})
 			}
 		} else {
-			result = utils.Merge(result, metrics)
-			invalidMetricsResult = utils.Merge(invalidMetricsResult, invalidMetrics)
+			result.Merge(metrics)
+			invalidMetricsResult.Merge(invalidMetrics)
 		}
 	}
 	return result, invalidMetricsResult, errs
@@ -273,10 +274,10 @@ func extractStaticVariables(variables []templateVar) map[string]string {
 	return result
 }
 
-func collectAllVariableName(variables []templateVar) []string {
-	result := make([]string, len(variables))
-	for i, v := range variables {
-		result[i] = v.Name
+func collectAllVariableName(variables []templateVar) modelAPIV1.Set[string] {
+	result := modelAPIV1.Set[string]{}
+	for _, v := range variables {
+		result.Add(v.Name)
 	}
 	return result
 }
@@ -291,8 +292,8 @@ func replaceVariables(expr string, staticVariables *strings.Replacer) string {
 
 // formatVariableInMetricName will replace the syntax of the variable by another one that can actually be parsed.
 // It will be useful for later when we want to know which metrics, this metric with variable is covered.
-func formatVariableInMetricName(metric string, variables []string) string {
-	for _, v := range variables {
+func formatVariableInMetricName(metric string, variables modelAPIV1.Set[string]) string {
+	for v := range variables {
 		metric = strings.Replace(metric, fmt.Sprintf("$%s", v), fmt.Sprintf("${%s}", v), -1)
 	}
 	return metric

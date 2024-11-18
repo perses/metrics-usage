@@ -44,7 +44,7 @@ func TestExtractMetricNameWithVariable(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			result := ExtractMetricNameWithVariable(test.expr)
-			assert.Equal(t, test.result, result)
+			assert.Equal(t, test.result, result.TransformAsSlice())
 		})
 	}
 }

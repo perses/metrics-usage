@@ -24,7 +24,6 @@ import (
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/pkg/client"
 	"github.com/perses/metrics-usage/usageclient"
-	"github.com/perses/metrics-usage/utils"
 	persesClientV1 "github.com/perses/perses/pkg/client/api/v1"
 	persesClientConfig "github.com/perses/perses/pkg/client/config"
 	v1 "github.com/perses/perses/pkg/model/api/v1"
@@ -86,15 +85,15 @@ func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error
 	return nil
 }
 
-func (c *persesCollector) generateUsage(metricNames []string, currentDashboard *v1.Dashboard) map[string]*modelAPIV1.MetricUsage {
+func (c *persesCollector) generateUsage(metricNames modelAPIV1.Set[string], currentDashboard *v1.Dashboard) map[string]*modelAPIV1.MetricUsage {
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	dashboardURL := fmt.Sprintf("%s/api/v1/projects/%s/dashboards/%s", c.persesURL, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
-	for _, metricName := range metricNames {
+	for metricName := range metricNames {
 		if usage, ok := metricUsage[metricName]; ok {
-			usage.Dashboards = utils.InsertIfNotPresent(usage.Dashboards, dashboardURL)
+			usage.Dashboards.Add(dashboardURL)
 		} else {
 			metricUsage[metricName] = &modelAPIV1.MetricUsage{
-				Dashboards: []string{dashboardURL},
+				Dashboards: modelAPIV1.NewSet(dashboardURL),
 			}
 		}
 	}
