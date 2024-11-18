@@ -15,19 +15,25 @@ package database
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/perses/metrics-usage/config"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/sirupsen/logrus"
 )
+
+var replaceVariableRegexp = regexp.MustCompile(`\$\{[a-zA-Z0-9_:]+}`)
 
 type Database interface {
 	GetMetric(name string) *v1.Metric
 	ListMetrics() map[string]*v1.Metric
-	ListInvalidMetrics() map[string]*v1.Metric
+	ListInvalidMetrics() map[string]*v1.InvalidMetrics
 	ListPendingUsage() map[string]*v1.MetricUsage
 	EnqueueMetricList(metrics []string)
 	EnqueueInvalidMetricsUsage(usages map[string]*v1.MetricUsage)
@@ -38,7 +44,7 @@ type Database interface {
 func New(cfg config.Database) Database {
 	d := &db{
 		metrics:                  make(map[string]*v1.Metric),
-		invalidMetrics:           make(map[string]*v1.Metric),
+		invalidMetrics:           make(map[string]*v1.InvalidMetrics),
 		usage:                    make(map[string]*v1.MetricUsage),
 		usageQueue:               make(chan map[string]*v1.MetricUsage, 250),
 		invalidMetricsUsageQueue: make(chan map[string]*v1.MetricUsage, 250),
@@ -66,7 +72,7 @@ type db struct {
 	// This struct is our "database".
 	metrics map[string]*v1.Metric
 	// invalidMetrics is the list of metric name that likely contains a variable or a regexp and as such cannot be a valid metric name.
-	invalidMetrics map[string]*v1.Metric
+	invalidMetrics map[string]*v1.InvalidMetrics
 	// usage is a buffer in case the metric name has not yet been collected
 	usage map[string]*v1.MetricUsage
 	// metricsQueue is the channel that should be used to send and receive the list of metric name to keep in memory.
@@ -110,7 +116,7 @@ func (d *db) ListMetrics() map[string]*v1.Metric {
 	return d.metrics
 }
 
-func (d *db) ListInvalidMetrics() map[string]*v1.Metric {
+func (d *db) ListInvalidMetrics() map[string]*v1.InvalidMetrics {
 	d.invalidMetricsUsageMutex.Lock()
 	defer d.invalidMetricsUsageMutex.Unlock()
 	return d.invalidMetrics
@@ -147,6 +153,7 @@ func (d *db) watchMetricsQueue() {
 				d.metrics[metricName] = &v1.Metric{
 					Labels: make(v1.Set[string]),
 				}
+				d.matchValidMetric(metricName)
 				// Since it's a new metric, potentially we already have a usage stored in the buffer.
 				if usage, usageExists := d.usage[metricName]; usageExists {
 					// TODO at some point we need to erase the usage map because it will cause a memory leak
@@ -164,8 +171,11 @@ func (d *db) watchInvalidMetricsUsageQueue() {
 		d.invalidMetricsUsageMutex.Lock()
 		for metricName, usage := range data {
 			if _, ok := d.invalidMetrics[metricName]; !ok {
-				d.invalidMetrics[metricName] = &v1.Metric{
-					Usage: usage,
+				re, matchingMetrics := d.matchInvalidMetric(metricName)
+				d.invalidMetrics[metricName] = &v1.InvalidMetrics{
+					Usage:           usage,
+					MatchingMetrics: matchingMetrics,
+					MatchingRegexp:  re,
 				}
 			} else {
 				d.invalidMetrics[metricName].Usage = mergeUsage(d.invalidMetrics[metricName].Usage, usage)
@@ -247,6 +257,54 @@ func (d *db) readMetricsInJSONFile() error {
 	return json.Unmarshal(data, &d.metrics)
 }
 
+func (d *db) matchInvalidMetric(invalidMetric string) (*common.Regexp, v1.Set[string]) {
+	re, err := generateRegexp(invalidMetric)
+	if err != nil {
+		logrus.WithError(err).Errorf("unable to compile the invalid metric name %q into a regexp", invalidMetric)
+		return nil, nil
+	}
+	if re == nil {
+		return nil, nil
+	}
+	result := v1.NewSet[string]()
+	d.metricsMutex.Lock()
+	defer d.metricsMutex.Unlock()
+	for m := range d.metrics {
+		if re.MatchString(m) {
+			result.Add(m)
+		}
+	}
+	return re, result
+}
+
+func (d *db) matchValidMetric(validMetric string) {
+	d.invalidMetricsUsageMutex.Lock()
+	defer d.invalidMetricsUsageMutex.Unlock()
+	for metricName, invalidMetric := range d.invalidMetrics {
+		re := invalidMetric.MatchingRegexp
+		if re == nil {
+			var err error
+			re, err = generateRegexp(metricName)
+			if err != nil {
+				logrus.WithError(err).Errorf("unable to compile the invalid metric name %q into a regexp", metricName)
+				continue
+			}
+			invalidMetric.MatchingRegexp = re
+			if re == nil {
+				continue
+			}
+		}
+		if re.MatchString(validMetric) {
+			matchingMetrics := invalidMetric.MatchingMetrics
+			if matchingMetrics == nil {
+				matchingMetrics = v1.NewSet[string]()
+				invalidMetric.MatchingMetrics = matchingMetrics
+			}
+			matchingMetrics.Add(validMetric)
+		}
+	}
+}
+
 func mergeUsage(old, new *v1.MetricUsage) *v1.MetricUsage {
 	if old == nil {
 		return new
@@ -254,8 +312,39 @@ func mergeUsage(old, new *v1.MetricUsage) *v1.MetricUsage {
 	if new == nil {
 		return old
 	}
-	old.Dashboards.Merge(new.Dashboards)
-	old.AlertRules.Merge(new.AlertRules)
-	old.RecordingRules.Merge(new.RecordingRules)
+	v1.MergeSet(old.Dashboards, new.Dashboards)
+	v1.MergeSet(old.AlertRules, new.AlertRules)
+	v1.MergeSet(old.RecordingRules, new.RecordingRules)
 	return old
+}
+
+// GenerateRegexp is taking an invalid metric name,
+// will replace every variable by a pattern and then returning a regepx if the final string is not just equal to .*.
+func generateRegexp(invalidMetricName string) (*common.Regexp, error) {
+	// The first step is to replace every variable by a single special char.
+	// We are using a special single char because it will be easier to find if these chars are continuous
+	// or if there are other characters in between.
+	s := replaceVariableRegexp.ReplaceAllString(invalidMetricName, "#")
+	s = strings.ReplaceAll(s, ".+", "#")
+	s = strings.ReplaceAll(s, ".*", "#")
+	if s == "#" || len(s) == 0 {
+		// This means the metric name is just a variable and as such can match all metric.
+		// So it's basically impossible to know what this invalid metric name is covering/matching.
+		return nil, nil
+	}
+	// The next step is to contact every continuous special char '#' to a single one.
+	compileString := fmt.Sprintf("%c", s[0])
+	expr := []rune(s)
+	for i := 1; i < len(expr); i++ {
+		if expr[i-1] == '#' && expr[i-1] == expr[i] {
+			continue
+		}
+		compileString += string(expr[i])
+	}
+	if compileString == "#" {
+		return nil, nil
+	}
+	compileString = strings.ReplaceAll(compileString, "#", ".+")
+	re, err := common.NewRegexp(fmt.Sprintf("^%s$", compileString))
+	return &re, err
 }

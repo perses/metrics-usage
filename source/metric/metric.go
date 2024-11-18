@@ -61,6 +61,7 @@ func (c *metricCollector) Execute(ctx context.Context, _ context.CancelFunc) err
 	}
 	// Finally, send the metric collected to the database; db will take care to store these data properly
 	if len(result) > 0 {
+		logrus.Infof("saving %d metrics", len(result))
 		c.db.EnqueueMetricList(result)
 	}
 	return nil

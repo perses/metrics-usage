@@ -13,7 +13,11 @@
 
 package v1
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/perses/perses/pkg/model/api/v1/common"
+)
 
 type Set[T comparable] map[T]struct{}
 
@@ -23,6 +27,17 @@ func NewSet[T comparable](vals ...T) Set[T] {
 		s[v] = struct{}{}
 	}
 	return s
+}
+
+func MergeSet[T comparable](old, new Set[T]) Set[T] {
+	if new == nil {
+		return old
+	}
+	if old == nil {
+		return new
+	}
+	old.Merge(new)
+	return old
 }
 
 func (s Set[T]) Add(vals ...T) {
@@ -99,4 +114,10 @@ type MetricUsage struct {
 type Metric struct {
 	Labels Set[string]  `json:"labels,omitempty"`
 	Usage  *MetricUsage `json:"usage,omitempty"`
+}
+
+type InvalidMetrics struct {
+	Usage           *MetricUsage   `json:"usage,omitempty"`
+	MatchingMetrics Set[string]    `json:"matchingMetrics,omitempty"`
+	MatchingRegexp  *common.Regexp `json:"matchingRegexp,omitempty"`
 }

@@ -14,6 +14,7 @@
 package parser
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,11 +41,18 @@ func TestExtractMetricNameWithVariable(t *testing.T) {
 			expr:   "rate(tomcat_requestprocessor_received_bytes{$onlyAddsExporter,phase=~\"$phase\",instance=~\"$instance\"}[5m])",
 			result: []string{"tomcat_requestprocessor_received_bytes"},
 		},
+		{
+			title:  "complex query",
+			expr:   "sum by (wow,${grouping:csv}) (label_replace( region_appinstance_witcher_schooltype:ninja_sarutobi_response_time_nanoseconds:rate2m_wow{prometheus=~\"ninja\", region=~\"$region\", app_instance=~\"$app_instance\", stack=~\"$stack\", witcher=~\"$witcher\"} / 1000000 / region_appinstance_witcher_schooltype:ninja_sarutobi_response_event_total:rate2m_wow{prometheus=~\"ninja\", region=~\"$region\", app_instance=~\"$app_instance\", stack=~\"$stack\", witcher=~\"$witcher\"}, \"wow\", \"wow\", \"\",\"\")) $wow true",
+			result: []string{"region_appinstance_witcher_schooltype:ninja_sarutobi_response_event_total:rate2m_wow", "region_appinstance_witcher_schooltype:ninja_sarutobi_response_time_nanoseconds:rate2m_wow"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			result := ExtractMetricNameWithVariable(test.expr)
-			assert.Equal(t, test.result, result.TransformAsSlice())
+			r := result.TransformAsSlice()
+			slices.Sort(r)
+			assert.Equal(t, test.result, r)
 		})
 	}
 }

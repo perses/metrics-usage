@@ -39,7 +39,7 @@ func (p *parser) parse(expr string) modelAPIV1.Set[string] {
 			p.currentMetric += string(char)
 			continue
 		}
-		if char == '(' || char == ')' || char == '"' || char == '=' || char == '!' || char == ',' {
+		if isInvalidMetricChar(char) {
 			// then it was not a metric name and we need to drop it
 			p.currentMetric = ""
 			continue
@@ -82,4 +82,8 @@ func isWhitespace(ch rune) bool {
 
 func isValidMetricChar(ch rune) bool {
 	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == '_' || ch == ':'
+}
+
+func isInvalidMetricChar(ch rune) bool {
+	return ch == '(' || ch == ')' || ch == '"' || ch == '=' || ch == '!' || ch == ',' || ch == '-' || ch == '+' || ch == '/' || ch == '~'
 }
