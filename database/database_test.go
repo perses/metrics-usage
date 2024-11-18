@@ -14,17 +14,22 @@
 package database
 
 import (
-	"regexp"
 	"testing"
 
+	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/stretchr/testify/assert"
 )
+
+func newRegexp(re string) *common.Regexp {
+	r := common.MustNewRegexp(re)
+	return &r
+}
 
 func TestGenerateRegexp(t *testing.T) {
 	tests := []struct {
 		title         string
 		invalidMetric string
-		result        *regexp.Regexp
+		result        *common.Regexp
 	}{
 		{
 			title:         "metric equal to a variable",
@@ -34,7 +39,7 @@ func TestGenerateRegexp(t *testing.T) {
 		{
 			title:         "metric with variable a suffix",
 			invalidMetric: "otelcol_exporter_enqueue_failed_log_records${suffix}",
-			result:        regexp.MustCompile(`otelcol_exporter_enqueue_failed_log_records.+`),
+			result:        newRegexp(`^otelcol_exporter_enqueue_failed_log_records.+$`),
 		},
 		{
 			title:         "metric with multiple variable 1",
@@ -44,12 +49,12 @@ func TestGenerateRegexp(t *testing.T) {
 		{
 			title:         "metric with multiple variable 2",
 			invalidMetric: "prefix_${foo}${bar}:collection_${collection}_suffix:${john}${doe}",
-			result:        regexp.MustCompile(`prefix_.+:collection_.+_suffix:.+`),
+			result:        newRegexp(`^prefix_.+:collection_.+_suffix:.+$`),
 		},
 		{
 			title:         "metric no variable",
 			invalidMetric: "otelcol_receiver_.+",
-			result:        regexp.MustCompile(`otelcol_receiver_.+`),
+			result:        newRegexp(`^otelcol_receiver_.+$`),
 		},
 	}
 

@@ -32,6 +32,7 @@ var (
 	labelValuesRegexp            = regexp.MustCompile(`(?s)label_values\((.+),.+\)`)
 	labelValuesNoQueryRegexp     = regexp.MustCompile(`(?s)label_values\((.+)\)`)
 	queryResultRegexp            = regexp.MustCompile(`(?s)query_result\((.+)\)`)
+	metricsRegexp                = regexp.MustCompile(`(?s)metrics\((.+)\)`)
 	variableRangeQueryRangeRegex = regexp.MustCompile(`\[\$?\w+?]`)
 	variableSubqueryRangeRegex   = regexp.MustCompile(`\[\$?\w+:\$?\w+?]`)
 	globalVariableList           = []variableTuple{
@@ -229,6 +230,12 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 		} else if queryResultRegexp.MatchString(query) {
 			// query_result(query)
 			query = queryResultRegexp.FindStringSubmatch(query)[1]
+			// metrics(.*partial_metric_name)
+		} else if metricsRegexp.MatchString(query) {
+			// for this particular use case, the query is an invalid metric names so there is no need to use the PromQL parser.
+			query = metricsRegexp.FindStringSubmatch(query)[1]
+			invalidMetricsResult.Add(formatVariableInMetricName(query, allVariableNames))
+			continue
 		}
 		exprWithVariableReplaced := replaceVariables(query, staticVariables)
 		metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
