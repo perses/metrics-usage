@@ -3,6 +3,7 @@ module github.com/perses/metrics-usage
 go 1.23.1
 
 require (
+	github.com/brunoga/deep v1.2.4
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20241113095943-9cb2bbfeb8a3
 	github.com/labstack/echo/v4 v4.12.0

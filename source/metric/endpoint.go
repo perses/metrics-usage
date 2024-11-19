@@ -55,22 +55,34 @@ func (e *endpoint) GetMetric(ctx echo.Context) error {
 }
 
 type request struct {
-	MetricName string `query:"metric_name"`
-	Used       *bool  `query:"used"`
+	MetricName          string `query:"metric_name"`
+	Used                *bool  `query:"used"`
+	MergeInvalidMetrics bool   `query:"merge_invalid_metrics"`
 }
 
-func (r *request) filter(list map[string]*v1.Metric) map[string]*v1.Metric {
+func (r *request) filter(validMetricList map[string]*v1.Metric, invalidMetricList map[string]*v1.InvalidMetric) map[string]*v1.Metric {
 	result := make(map[string]*v1.Metric)
-	if len(r.MetricName) == 0 && r.Used == nil {
-		return list
+
+	if r.MergeInvalidMetrics {
+		for _, metric := range invalidMetricList {
+			for metricName := range metric.MatchingMetrics {
+				if m, ok := validMetricList[metricName]; ok {
+					m.Usage = v1.MergeUsage(m.Usage, metric.Usage)
+				}
+			}
+		}
 	}
-	for k, v := range list {
+
+	if len(r.MetricName) == 0 && r.Used == nil {
+		return validMetricList
+	}
+	for k, v := range validMetricList {
 		if len(r.MetricName) == 0 || fuzzy.Match(r.MetricName, k) {
 			if r.Used == nil {
 				result[k] = v
-			} else if *r.Used && list[k].Usage != nil {
+			} else if *r.Used && validMetricList[k].Usage != nil {
 				result[k] = v
-			} else if !*r.Used && list[k].Usage == nil {
+			} else if !*r.Used && validMetricList[k].Usage == nil {
 				result[k] = v
 			}
 		}
@@ -84,7 +96,18 @@ func (e *endpoint) ListMetrics(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
 	}
-	return ctx.JSON(http.StatusOK, req.filter(e.db.ListMetrics()))
+	var invalidMetricList map[string]*v1.InvalidMetric
+	if req.MergeInvalidMetrics {
+		invalidMetricList, err = e.db.ListInvalidMetrics()
+		if err != nil {
+			return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
+		}
+	}
+	metricList, err := e.db.ListMetrics()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, req.filter(metricList, invalidMetricList))
 }
 
 func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
@@ -97,7 +120,11 @@ func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
 }
 
 func (e *endpoint) ListInvalidMetrics(ctx echo.Context) error {
-	return ctx.JSON(http.StatusOK, e.db.ListInvalidMetrics())
+	list, err := e.db.ListInvalidMetrics()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
+	}
+	return ctx.JSON(http.StatusOK, list)
 }
 
 func (e *endpoint) PushInvalidMetricsUsage(ctx echo.Context) error {
