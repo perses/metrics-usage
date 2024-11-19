@@ -36,8 +36,14 @@ func MergeSet[T comparable](old, new Set[T]) Set[T] {
 	if old == nil {
 		return new
 	}
-	old.Merge(new)
-	return old
+	s := Set[T]{}
+	for k, v := range new {
+		s[k] = v
+	}
+	for k, v := range old {
+		s[k] = v
+	}
+	return s
 }
 
 func (s Set[T]) Add(vals ...T) {
@@ -111,12 +117,26 @@ type MetricUsage struct {
 	AlertRules     Set[RuleUsage] `json:"alertRules,omitempty"`
 }
 
+func MergeUsage(old, new *MetricUsage) *MetricUsage {
+	if old == nil {
+		return new
+	}
+	if new == nil {
+		return old
+	}
+	return &MetricUsage{
+		Dashboards:     MergeSet(old.Dashboards, new.Dashboards),
+		AlertRules:     MergeSet(old.AlertRules, new.AlertRules),
+		RecordingRules: MergeSet(old.RecordingRules, new.RecordingRules),
+	}
+}
+
 type Metric struct {
 	Labels Set[string]  `json:"labels,omitempty"`
 	Usage  *MetricUsage `json:"usage,omitempty"`
 }
 
-type InvalidMetrics struct {
+type InvalidMetric struct {
 	Usage           *MetricUsage   `json:"usage,omitempty"`
 	MatchingMetrics Set[string]    `json:"matchingMetrics,omitempty"`
 	MatchingRegexp  *common.Regexp `json:"matchingRegexp,omitempty"`

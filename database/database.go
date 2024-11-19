@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/brunoga/deep"
 	"github.com/perses/metrics-usage/config"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/common"
@@ -32,8 +33,8 @@ var replaceVariableRegexp = regexp.MustCompile(`\$\{[a-zA-Z0-9_:]+}`)
 
 type Database interface {
 	GetMetric(name string) *v1.Metric
-	ListMetrics() map[string]*v1.Metric
-	ListInvalidMetrics() map[string]*v1.InvalidMetrics
+	ListMetrics() (map[string]*v1.Metric, error)
+	ListInvalidMetrics() (map[string]*v1.InvalidMetric, error)
 	ListPendingUsage() map[string]*v1.MetricUsage
 	EnqueueMetricList(metrics []string)
 	EnqueueInvalidMetricsUsage(usages map[string]*v1.MetricUsage)
@@ -44,7 +45,7 @@ type Database interface {
 func New(cfg config.Database) Database {
 	d := &db{
 		metrics:                  make(map[string]*v1.Metric),
-		invalidMetrics:           make(map[string]*v1.InvalidMetrics),
+		invalidMetrics:           make(map[string]*v1.InvalidMetric),
 		usage:                    make(map[string]*v1.MetricUsage),
 		usageQueue:               make(chan map[string]*v1.MetricUsage, 250),
 		invalidMetricsUsageQueue: make(chan map[string]*v1.MetricUsage, 250),
@@ -72,7 +73,7 @@ type db struct {
 	// This struct is our "database".
 	metrics map[string]*v1.Metric
 	// invalidMetrics is the list of metric name that likely contains a variable or a regexp and as such cannot be a valid metric name.
-	invalidMetrics map[string]*v1.InvalidMetrics
+	invalidMetrics map[string]*v1.InvalidMetric
 	// usage is a buffer in case the metric name has not yet been collected
 	usage map[string]*v1.MetricUsage
 	// metricsQueue is the channel that should be used to send and receive the list of metric name to keep in memory.
@@ -110,16 +111,16 @@ func (d *db) GetMetric(name string) *v1.Metric {
 	return d.metrics[name]
 }
 
-func (d *db) ListMetrics() map[string]*v1.Metric {
+func (d *db) ListMetrics() (map[string]*v1.Metric, error) {
 	d.metricsMutex.Lock()
 	defer d.metricsMutex.Unlock()
-	return d.metrics
+	return deep.Copy(d.metrics)
 }
 
-func (d *db) ListInvalidMetrics() map[string]*v1.InvalidMetrics {
+func (d *db) ListInvalidMetrics() (map[string]*v1.InvalidMetric, error) {
 	d.invalidMetricsUsageMutex.Lock()
 	defer d.invalidMetricsUsageMutex.Unlock()
-	return d.invalidMetrics
+	return deep.Copy(d.invalidMetrics)
 }
 
 func (d *db) EnqueueMetricList(metrics []string) {
@@ -172,13 +173,13 @@ func (d *db) watchInvalidMetricsUsageQueue() {
 		for metricName, usage := range data {
 			if _, ok := d.invalidMetrics[metricName]; !ok {
 				re, matchingMetrics := d.matchInvalidMetric(metricName)
-				d.invalidMetrics[metricName] = &v1.InvalidMetrics{
+				d.invalidMetrics[metricName] = &v1.InvalidMetric{
 					Usage:           usage,
 					MatchingMetrics: matchingMetrics,
 					MatchingRegexp:  re,
 				}
 			} else {
-				d.invalidMetrics[metricName].Usage = mergeUsage(d.invalidMetrics[metricName].Usage, usage)
+				d.invalidMetrics[metricName].Usage = v1.MergeUsage(d.invalidMetrics[metricName].Usage, usage)
 			}
 		}
 		d.invalidMetricsUsageMutex.Unlock()
@@ -194,14 +195,9 @@ func (d *db) watchUsageQueue() {
 				// Since the metric_name is not known yet, we need to buffer it.
 				// In a later stage, if the metric is received/known,
 				// we will then use this buffer to populate the usage of the metric.
-				if _, isUsed := d.usage[metricName]; !isUsed {
-					d.usage[metricName] = usage
-				} else {
-					// In that case, we need to merge the usage.
-					d.usage[metricName] = mergeUsage(d.usage[metricName], usage)
-				}
+				d.usage[metricName] = v1.MergeUsage(d.usage[metricName], usage)
 			} else {
-				d.metrics[metricName].Usage = mergeUsage(d.metrics[metricName].Usage, usage)
+				d.metrics[metricName].Usage = v1.MergeUsage(d.metrics[metricName].Usage, usage)
 			}
 		}
 		d.metricsMutex.Unlock()
@@ -303,19 +299,6 @@ func (d *db) matchValidMetric(validMetric string) {
 			matchingMetrics.Add(validMetric)
 		}
 	}
-}
-
-func mergeUsage(old, new *v1.MetricUsage) *v1.MetricUsage {
-	if old == nil {
-		return new
-	}
-	if new == nil {
-		return old
-	}
-	v1.MergeSet(old.Dashboards, new.Dashboards)
-	v1.MergeSet(old.AlertRules, new.AlertRules)
-	v1.MergeSet(old.RecordingRules, new.RecordingRules)
-	return old
 }
 
 // GenerateRegexp is taking an invalid metric name,
