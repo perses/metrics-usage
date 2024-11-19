@@ -28,39 +28,39 @@ func newRegexp(re string) *common.Regexp {
 func TestGenerateRegexp(t *testing.T) {
 	tests := []struct {
 		title         string
-		invalidMetric string
+		partialMetric string
 		result        *common.Regexp
 	}{
 		{
 			title:         "metric equal to a variable",
-			invalidMetric: "${metric}",
+			partialMetric: "${metric}",
 			result:        nil,
 		},
 		{
 			title:         "metric with variable a suffix",
-			invalidMetric: "otelcol_exporter_enqueue_failed_log_records${suffix}",
+			partialMetric: "otelcol_exporter_enqueue_failed_log_records${suffix}",
 			result:        newRegexp(`^otelcol_exporter_enqueue_failed_log_records.+$`),
 		},
 		{
 			title:         "metric with multiple variable 1",
-			invalidMetric: "${foo}${bar}${john}${doe}",
+			partialMetric: "${foo}${bar}${john}${doe}",
 			result:        nil,
 		},
 		{
 			title:         "metric with multiple variable 2",
-			invalidMetric: "prefix_${foo}${bar}:collection_${collection}_suffix:${john}${doe}",
+			partialMetric: "prefix_${foo}${bar}:collection_${collection}_suffix:${john}${doe}",
 			result:        newRegexp(`^prefix_.+:collection_.+_suffix:.+$`),
 		},
 		{
 			title:         "metric no variable",
-			invalidMetric: "otelcol_receiver_.+",
+			partialMetric: "otelcol_receiver_.+",
 			result:        newRegexp(`^otelcol_receiver_.+$`),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			re, err := generateRegexp(test.invalidMetric)
+			re, err := generateRegexp(test.partialMetric)
 			assert.NoError(t, err)
 			assert.Equal(t, test.result, re)
 		})

@@ -69,13 +69,13 @@ func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 		c.logger.WithError(err).Error("Failed to get rules")
 		return nil
 	}
-	metricsUsage, invalidMetricsUsage, errs := prometheus.Analyze(result.Groups, c.promURL)
+	metricsUsage, partialMetricsUsage, errs := prometheus.Analyze(result.Groups, c.promURL)
 	for _, logErr := range errs {
 		logErr.Log(c.logger)
 	}
 	c.logger.Infof("%d metrics usage has been collected", len(metricsUsage))
-	c.logger.Infof("%d metrics containing regexp or variable has been collected", len(invalidMetricsUsage))
-	c.metricUsageClient.SendUsage(metricsUsage, invalidMetricsUsage)
+	c.logger.Infof("%d metrics containing regexp or variable has been collected", len(partialMetricsUsage))
+	c.metricUsageClient.SendUsage(metricsUsage, partialMetricsUsage)
 	return nil
 }
 

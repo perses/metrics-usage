@@ -72,15 +72,15 @@ func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error
 	}
 
 	for _, dash := range dashboards {
-		metrics, invalidMetrics, errs := perses.Analyze(dash)
+		metrics, partialMetrics, errs := perses.Analyze(dash)
 		for _, logErr := range errs {
 			logErr.Log(c.logger)
 		}
 		metricUsage := c.generateUsage(metrics, dash)
-		invalidMetricUsage := c.generateUsage(invalidMetrics, dash)
+		partialMetricUsage := c.generateUsage(partialMetrics, dash)
 		c.logger.Infof("%d metrics usage has been collected for the dashboard %s/%s", len(metricUsage), dash.Metadata.Project, dash.Metadata.Name)
-		c.logger.Infof("%d metrics containing regexp or variable has been collected for the dashboard %s/%s", len(invalidMetricUsage), dash.Metadata.Project, dash.Metadata.Name)
-		c.metricUsageClient.SendUsage(metricUsage, invalidMetricUsage)
+		c.logger.Infof("%d metrics containing regexp or variable has been collected for the dashboard %s/%s", len(partialMetricUsage), dash.Metadata.Project, dash.Metadata.Name)
+		c.metricUsageClient.SendUsage(metricUsage, partialMetricUsage)
 	}
 	return nil
 }

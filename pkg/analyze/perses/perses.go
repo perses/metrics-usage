@@ -51,7 +51,7 @@ func Analyze(dashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[st
 func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
-	invalidMetricsResult := modelAPIV1.Set[string]{}
+	partialMetricsResult := modelAPIV1.Set[string]{}
 	for panelName, panel := range panels {
 		for i, q := range panel.Spec.Queries {
 			if q.Spec.Plugin.Kind != query.PluginKind {
@@ -70,7 +70,7 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 				continue
 			}
 			exprWithVariableReplaced := replaceVariables(spec.Query)
-			metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
+			metrics, partialMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 			if err != nil {
 				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 				if len(otherMetrics) > 0 {
@@ -78,7 +78,7 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 						if prometheus.IsValidMetricName(m) {
 							result.Add(m)
 						} else {
-							invalidMetricsResult.Add(m)
+							partialMetricsResult.Add(m)
 						}
 					}
 				} else {
@@ -90,16 +90,16 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 				}
 			}
 			result.Merge(metrics)
-			invalidMetricsResult.Merge(invalidMetrics)
+			partialMetricsResult.Merge(partialMetrics)
 		}
 	}
-	return result, invalidMetricsResult, errs
+	return result, partialMetricsResult, errs
 }
 
 func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
-	invalidMetricsResult := modelAPIV1.Set[string]{}
+	partialMetricsResult := modelAPIV1.Set[string]{}
 	for _, v := range variables {
 		if v.Kind != variable.KindList {
 			continue
@@ -124,7 +124,7 @@ func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDash
 			continue
 		}
 		exprWithVariableReplaced := replaceVariables(spec.Expr)
-		metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
+		metrics, partialMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 		if err != nil {
 			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 			if len(otherMetrics) > 0 {
@@ -132,7 +132,7 @@ func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDash
 					if prometheus.IsValidMetricName(m) {
 						result.Add(m)
 					} else {
-						invalidMetricsResult.Add(m)
+						partialMetricsResult.Add(m)
 					}
 				}
 			} else {
@@ -144,9 +144,9 @@ func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDash
 			}
 		}
 		result.Merge(metrics)
-		invalidMetricsResult.Merge(invalidMetrics)
+		partialMetricsResult.Merge(partialMetrics)
 	}
-	return result, invalidMetricsResult, errs
+	return result, partialMetricsResult, errs
 }
 
 func replaceVariables(expr string) string {

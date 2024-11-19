@@ -165,14 +165,14 @@ func Analyze(dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1
 func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
-	invalidMetricsResult := modelAPIV1.Set[string]{}
+	partialMetricsResult := modelAPIV1.Set[string]{}
 	for _, p := range panels {
 		for _, t := range extractTarget(p) {
 			if len(t.Expr) == 0 {
 				continue
 			}
 			exprWithVariableReplaced := replaceVariables(t.Expr, staticVariables)
-			metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
+			metrics, partialMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 			if err != nil {
 				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 				if len(otherMetrics) > 0 {
@@ -180,7 +180,7 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 						if prometheus.IsValidMetricName(m) {
 							result.Add(m)
 						} else {
-							invalidMetricsResult.Add(formatVariableInMetricName(m, allVariableNames))
+							partialMetricsResult.Add(formatVariableInMetricName(m, allVariableNames))
 						}
 					}
 				} else {
@@ -191,24 +191,25 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 				}
 			} else {
 				result.Merge(metrics)
-				invalidMetricsResult.Merge(invalidMetrics)
+				partialMetricsResult.Merge(partialMetrics)
 			}
 		}
 	}
-	return result, invalidMetricsResult, errs
+	return result, partialMetricsResult, errs
 }
 
 func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
-	invalidMetricsResult := modelAPIV1.Set[string]{}
+	partialMetricsResult := modelAPIV1.Set[string]{}
 	for _, v := range variables {
 		if v.Type != "query" {
 			continue
 		}
 		query, err := v.extractQueryFromVariableTemplating()
 		if err != nil {
-			// It appears when there is an issue, we cannot do anything about it actually and usually the variable is not the one we are looking for.
+			// It appears when there is an issue, we cannot do anything about it,
+			// and usually the variable is not the one we are looking for.
 			// So we just log it as a warning
 			errs = append(errs, &modelAPIV1.LogError{
 				Warning: err,
@@ -232,13 +233,13 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 			query = queryResultRegexp.FindStringSubmatch(query)[1]
 			// metrics(.*partial_metric_name)
 		} else if metricsRegexp.MatchString(query) {
-			// for this particular use case, the query is an invalid metric names so there is no need to use the PromQL parser.
+			// for this particular use case, the query is a partial metric names so there is no need to use the PromQL parser.
 			query = metricsRegexp.FindStringSubmatch(query)[1]
-			invalidMetricsResult.Add(formatVariableInMetricName(query, allVariableNames))
+			partialMetricsResult.Add(formatVariableInMetricName(query, allVariableNames))
 			continue
 		}
 		exprWithVariableReplaced := replaceVariables(query, staticVariables)
-		metrics, invalidMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
+		metrics, partialMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
 		if err != nil {
 			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 			if len(otherMetrics) > 0 {
@@ -246,7 +247,7 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 					if prometheus.IsValidMetricName(m) {
 						result.Add(m)
 					} else {
-						invalidMetricsResult.Add(formatVariableInMetricName(m, allVariableNames))
+						partialMetricsResult.Add(formatVariableInMetricName(m, allVariableNames))
 					}
 				}
 			} else {
@@ -257,10 +258,10 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 			}
 		} else {
 			result.Merge(metrics)
-			invalidMetricsResult.Merge(invalidMetrics)
+			partialMetricsResult.Merge(partialMetrics)
 		}
 	}
-	return result, invalidMetricsResult, errs
+	return result, partialMetricsResult, errs
 }
 
 func extractStaticVariables(variables []templateVar) map[string]string {

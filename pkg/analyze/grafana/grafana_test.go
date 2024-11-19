@@ -121,9 +121,9 @@ func TestAnalyze(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			metrics, invalidMetrics, errs := Analyze(dashboard)
+			metrics, partialMetrics, errs := Analyze(dashboard)
 			metricsAsSlice := metrics.TransformAsSlice()
-			invalidMetricsAsSlice := invalidMetrics.TransformAsSlice()
+			invalidMetricsAsSlice := partialMetrics.TransformAsSlice()
 			slices.Sort(metricsAsSlice)
 			slices.Sort(invalidMetricsAsSlice)
 			assert.Equal(t, tt.resultMetrics, metricsAsSlice)
