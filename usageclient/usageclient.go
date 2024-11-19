@@ -28,7 +28,7 @@ type Client struct {
 
 func (c *Client) SendUsage(metricUsage map[string]*modelAPIV1.MetricUsage, invalidMetricUsage map[string]*modelAPIV1.MetricUsage) {
 	c.sendMetricUsage(metricUsage)
-	c.sendInvalidMetricUsage(invalidMetricUsage)
+	c.sendPartialMetricUsage(invalidMetricUsage)
 }
 
 func (c *Client) sendMetricUsage(usage map[string]*modelAPIV1.MetricUsage) {
@@ -45,16 +45,16 @@ func (c *Client) sendMetricUsage(usage map[string]*modelAPIV1.MetricUsage) {
 	}
 }
 
-func (c *Client) sendInvalidMetricUsage(usage map[string]*modelAPIV1.MetricUsage) {
+func (c *Client) sendPartialMetricUsage(usage map[string]*modelAPIV1.MetricUsage) {
 	if len(usage) == 0 {
 		return
 	}
 	if c.MetricUsageClient != nil {
 		// In this case, that means we have to send the data to a remote server.
-		if sendErr := c.MetricUsageClient.InvalidMetricsUsage(usage); sendErr != nil {
+		if sendErr := c.MetricUsageClient.PartialMetricsUsage(usage); sendErr != nil {
 			c.Logger.WithError(sendErr).Error("Failed to send usage for invalid_metric")
 		}
 	} else {
-		c.DB.EnqueueInvalidMetricsUsage(usage)
+		c.DB.EnqueuePartialMetricsUsage(usage)
 	}
 }

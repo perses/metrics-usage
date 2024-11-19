@@ -28,12 +28,12 @@ var validMetricName = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.MetricUsage, map[string]*modelAPIV1.MetricUsage, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
-	invalidMetricUsage := make(map[string]*modelAPIV1.MetricUsage)
+	partialMetricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	for _, ruleGroup := range ruleGroups {
 		for _, rule := range ruleGroup.Rules {
 			switch v := rule.(type) {
 			case v1.RecordingRule:
-				metricNames, invalidMetrics, parserErr := AnalyzePromQLExpression(v.Query)
+				metricNames, partialMetrics, parserErr := AnalyzePromQLExpression(v.Query)
 				if parserErr != nil {
 					errs = append(errs, &modelAPIV1.LogError{
 						Message: fmt.Sprintf("Failed to extract metric name for the ruleGroup %q and the recordingRule %q", ruleGroup.Name, v.Name),
@@ -51,8 +51,8 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 					},
 					false,
 				)
-				populateUsage(invalidMetricUsage,
-					invalidMetrics,
+				populateUsage(partialMetricUsage,
+					partialMetrics,
 					modelAPIV1.RuleUsage{
 						PromLink:   source,
 						GroupName:  ruleGroup.Name,
@@ -62,7 +62,7 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 					false,
 				)
 			case v1.AlertingRule:
-				metricNames, invalidMetrics, parserErr := AnalyzePromQLExpression(v.Query)
+				metricNames, partialMetrics, parserErr := AnalyzePromQLExpression(v.Query)
 				if parserErr != nil {
 					errs = append(errs, &modelAPIV1.LogError{
 						Message: fmt.Sprintf("Failed to extract metric name for the ruleGroup %q and the alertingRule %q", ruleGroup.Name, v.Name),
@@ -80,8 +80,8 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 					},
 					true,
 				)
-				populateUsage(invalidMetricUsage,
-					invalidMetrics,
+				populateUsage(partialMetricUsage,
+					partialMetrics,
 					modelAPIV1.RuleUsage{
 						PromLink:   source,
 						GroupName:  ruleGroup.Name,
@@ -97,18 +97,18 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 			}
 		}
 	}
-	return metricUsage, invalidMetricUsage, errs
+	return metricUsage, partialMetricUsage, errs
 }
 
 // AnalyzePromQLExpression is returning a list of valid metric names extracted from the PromQL expression.
-// It also returned a list of invalid metric names that likely look like a regexp.
+// It also returned a list of partial metric names that likely look like a regexp.
 func AnalyzePromQLExpression(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
 	expr, err := parser.ParseExpr(query)
 	if err != nil {
 		return nil, nil, err
 	}
 	metricNames := modelAPIV1.Set[string]{}
-	invalidMetricNames := modelAPIV1.Set[string]{}
+	partialMetricNames := modelAPIV1.Set[string]{}
 	parser.Inspect(expr, func(node parser.Node, _ []parser.Node) error {
 		if n, ok := node.(*parser.VectorSelector); ok {
 			// The metric name is only present when the node is a VectorSelector.
@@ -124,7 +124,7 @@ func AnalyzePromQLExpression(query string) (modelAPIV1.Set[string], modelAPIV1.S
 					if IsValidMetricName(m.Value) {
 						metricNames.Add(m.Value)
 					} else {
-						invalidMetricNames.Add(m.Value)
+						partialMetricNames.Add(m.Value)
 					}
 
 					return nil
@@ -133,7 +133,7 @@ func AnalyzePromQLExpression(query string) (modelAPIV1.Set[string], modelAPIV1.S
 		}
 		return nil
 	})
-	return metricNames, invalidMetricNames, nil
+	return metricNames, partialMetricNames, nil
 }
 
 func IsValidMetricName(name string) bool {

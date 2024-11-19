@@ -136,7 +136,7 @@ type Metric struct {
 	Usage  *MetricUsage `json:"usage,omitempty"`
 }
 
-type InvalidMetric struct {
+type PartialMetric struct {
 	Usage           *MetricUsage   `json:"usage,omitempty"`
 	MatchingMetrics Set[string]    `json:"matchingMetrics,omitempty"`
 	MatchingRegexp  *common.Regexp `json:"matchingRegexp,omitempty"`

@@ -27,7 +27,7 @@ import (
 
 type Client interface {
 	Usage(map[string]*modelAPIV1.MetricUsage) error
-	InvalidMetricsUsage(metrics map[string]*modelAPIV1.MetricUsage) error
+	PartialMetricsUsage(metrics map[string]*modelAPIV1.MetricUsage) error
 	Labels(map[string][]string) error
 }
 
@@ -63,13 +63,13 @@ func (c *client) Usage(metrics map[string]*modelAPIV1.MetricUsage) error {
 	return nil
 }
 
-func (c *client) InvalidMetricsUsage(metrics map[string]*modelAPIV1.MetricUsage) error {
+func (c *client) PartialMetricsUsage(metrics map[string]*modelAPIV1.MetricUsage) error {
 	data, err := json.Marshal(metrics)
 	if err != nil {
 		return err
 	}
 	body := bytes.NewBuffer(data)
-	resp, err := c.httpClient.Post(c.url("/api/v1/invalid_metrics").String(), "application/json", body)
+	resp, err := c.httpClient.Post(c.url("/api/v1/partial_metrics").String(), "application/json", body)
 	if err != nil {
 		return err
 	}

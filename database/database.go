@@ -34,10 +34,10 @@ var replaceVariableRegexp = regexp.MustCompile(`\$\{[a-zA-Z0-9_:]+}`)
 type Database interface {
 	GetMetric(name string) *v1.Metric
 	ListMetrics() (map[string]*v1.Metric, error)
-	ListInvalidMetrics() (map[string]*v1.InvalidMetric, error)
+	ListPartialMetrics() (map[string]*v1.PartialMetric, error)
 	ListPendingUsage() map[string]*v1.MetricUsage
 	EnqueueMetricList(metrics []string)
-	EnqueueInvalidMetricsUsage(usages map[string]*v1.MetricUsage)
+	EnqueuePartialMetricsUsage(usages map[string]*v1.MetricUsage)
 	EnqueueUsage(usages map[string]*v1.MetricUsage)
 	EnqueueLabels(labels map[string][]string)
 }
@@ -45,10 +45,10 @@ type Database interface {
 func New(cfg config.Database) Database {
 	d := &db{
 		metrics:                  make(map[string]*v1.Metric),
-		invalidMetrics:           make(map[string]*v1.InvalidMetric),
+		partialMetrics:           make(map[string]*v1.PartialMetric),
 		usage:                    make(map[string]*v1.MetricUsage),
 		usageQueue:               make(chan map[string]*v1.MetricUsage, 250),
-		invalidMetricsUsageQueue: make(chan map[string]*v1.MetricUsage, 250),
+		partialMetricsUsageQueue: make(chan map[string]*v1.MetricUsage, 250),
 		labelsQueue:              make(chan map[string][]string, 250),
 		metricsQueue:             make(chan []string, 10),
 		path:                     cfg.Path,
@@ -56,7 +56,7 @@ func New(cfg config.Database) Database {
 
 	go d.watchUsageQueue()
 	go d.watchMetricsQueue()
-	go d.watchInvalidMetricsUsageQueue()
+	go d.watchPartialMetricsUsageQueue()
 	go d.watchLabelsQueue()
 	if !*cfg.InMemory {
 		if err := d.readMetricsInJSONFile(); err != nil {
@@ -72,8 +72,8 @@ type db struct {
 	// metrics is the list of metric name (as a key) associated to their usage based on the different collector activated.
 	// This struct is our "database".
 	metrics map[string]*v1.Metric
-	// invalidMetrics is the list of metric name that likely contains a variable or a regexp and as such cannot be a valid metric name.
-	invalidMetrics map[string]*v1.InvalidMetric
+	// partialMetrics is the list of metric name that likely contains a variable or a regexp and as such cannot be a valid metric name.
+	partialMetrics map[string]*v1.PartialMetric
 	// usage is a buffer in case the metric name has not yet been collected
 	usage map[string]*v1.MetricUsage
 	// metricsQueue is the channel that should be used to send and receive the list of metric name to keep in memory.
@@ -87,10 +87,10 @@ type db struct {
 	// There will be no other way to write in it.
 	// Doing that allows us to accept more HTTP requests to write data and to delay the actual writing.
 	usageQueue chan map[string]*v1.MetricUsage
-	// invalidMetricsUsageQueue is the way to send the usage per metric that is not valid to write in the database.
+	// partialMetricsUsageQueue is the way to send the usage per metric that is not valid to write in the database.
 	// There will be no other way to write in it.
 	// Doing that allows us to accept more HTTP requests to write data and to delay the actual writing.
-	invalidMetricsUsageQueue chan map[string]*v1.MetricUsage
+	partialMetricsUsageQueue chan map[string]*v1.MetricUsage
 	// path is the path to the JSON file where metrics is flushed periodically
 	// It is empty if the database is purely in memory.
 	path string
@@ -102,7 +102,7 @@ type db struct {
 	// 2. Read the file directly when a read query is coming
 	// Like that we have two different ways to read and write the data.
 	metricsMutex             sync.Mutex
-	invalidMetricsUsageMutex sync.Mutex
+	partialMetricsUsageMutex sync.Mutex
 }
 
 func (d *db) GetMetric(name string) *v1.Metric {
@@ -117,10 +117,10 @@ func (d *db) ListMetrics() (map[string]*v1.Metric, error) {
 	return deep.Copy(d.metrics)
 }
 
-func (d *db) ListInvalidMetrics() (map[string]*v1.InvalidMetric, error) {
-	d.invalidMetricsUsageMutex.Lock()
-	defer d.invalidMetricsUsageMutex.Unlock()
-	return deep.Copy(d.invalidMetrics)
+func (d *db) ListPartialMetrics() (map[string]*v1.PartialMetric, error) {
+	d.partialMetricsUsageMutex.Lock()
+	defer d.partialMetricsUsageMutex.Unlock()
+	return deep.Copy(d.partialMetrics)
 }
 
 func (d *db) EnqueueMetricList(metrics []string) {
@@ -137,8 +137,8 @@ func (d *db) EnqueueUsage(usages map[string]*v1.MetricUsage) {
 	d.usageQueue <- usages
 }
 
-func (d *db) EnqueueInvalidMetricsUsage(usages map[string]*v1.MetricUsage) {
-	d.invalidMetricsUsageQueue <- usages
+func (d *db) EnqueuePartialMetricsUsage(usages map[string]*v1.MetricUsage) {
+	d.partialMetricsUsageQueue <- usages
 }
 
 func (d *db) EnqueueLabels(labels map[string][]string) {
@@ -167,22 +167,22 @@ func (d *db) watchMetricsQueue() {
 	}
 }
 
-func (d *db) watchInvalidMetricsUsageQueue() {
-	for data := range d.invalidMetricsUsageQueue {
-		d.invalidMetricsUsageMutex.Lock()
+func (d *db) watchPartialMetricsUsageQueue() {
+	for data := range d.partialMetricsUsageQueue {
+		d.partialMetricsUsageMutex.Lock()
 		for metricName, usage := range data {
-			if _, ok := d.invalidMetrics[metricName]; !ok {
-				re, matchingMetrics := d.matchInvalidMetric(metricName)
-				d.invalidMetrics[metricName] = &v1.InvalidMetric{
+			if _, ok := d.partialMetrics[metricName]; !ok {
+				re, matchingMetrics := d.matchPartialMetric(metricName)
+				d.partialMetrics[metricName] = &v1.PartialMetric{
 					Usage:           usage,
 					MatchingMetrics: matchingMetrics,
 					MatchingRegexp:  re,
 				}
 			} else {
-				d.invalidMetrics[metricName].Usage = v1.MergeUsage(d.invalidMetrics[metricName].Usage, usage)
+				d.partialMetrics[metricName].Usage = v1.MergeUsage(d.partialMetrics[metricName].Usage, usage)
 			}
 		}
-		d.invalidMetricsUsageMutex.Unlock()
+		d.partialMetricsUsageMutex.Unlock()
 	}
 }
 
@@ -253,10 +253,10 @@ func (d *db) readMetricsInJSONFile() error {
 	return json.Unmarshal(data, &d.metrics)
 }
 
-func (d *db) matchInvalidMetric(invalidMetric string) (*common.Regexp, v1.Set[string]) {
-	re, err := generateRegexp(invalidMetric)
+func (d *db) matchPartialMetric(partialMetric string) (*common.Regexp, v1.Set[string]) {
+	re, err := generateRegexp(partialMetric)
 	if err != nil {
-		logrus.WithError(err).Errorf("unable to compile the invalid metric name %q into a regexp", invalidMetric)
+		logrus.WithError(err).Errorf("unable to compile the partial metric name %q into a regexp", partialMetric)
 		return nil, nil
 	}
 	if re == nil {
@@ -274,45 +274,45 @@ func (d *db) matchInvalidMetric(invalidMetric string) (*common.Regexp, v1.Set[st
 }
 
 func (d *db) matchValidMetric(validMetric string) {
-	d.invalidMetricsUsageMutex.Lock()
-	defer d.invalidMetricsUsageMutex.Unlock()
-	for metricName, invalidMetric := range d.invalidMetrics {
-		re := invalidMetric.MatchingRegexp
+	d.partialMetricsUsageMutex.Lock()
+	defer d.partialMetricsUsageMutex.Unlock()
+	for metricName, partialMetric := range d.partialMetrics {
+		re := partialMetric.MatchingRegexp
 		if re == nil {
 			var err error
 			re, err = generateRegexp(metricName)
 			if err != nil {
-				logrus.WithError(err).Errorf("unable to compile the invalid metric name %q into a regexp", metricName)
+				logrus.WithError(err).Errorf("unable to compile the partial metric name %q into a regexp", metricName)
 				continue
 			}
-			invalidMetric.MatchingRegexp = re
+			partialMetric.MatchingRegexp = re
 			if re == nil {
 				continue
 			}
 		}
 		if re.MatchString(validMetric) {
-			matchingMetrics := invalidMetric.MatchingMetrics
+			matchingMetrics := partialMetric.MatchingMetrics
 			if matchingMetrics == nil {
 				matchingMetrics = v1.NewSet[string]()
-				invalidMetric.MatchingMetrics = matchingMetrics
+				partialMetric.MatchingMetrics = matchingMetrics
 			}
 			matchingMetrics.Add(validMetric)
 		}
 	}
 }
 
-// GenerateRegexp is taking an invalid metric name,
+// GenerateRegexp is taking an partial metric name,
 // will replace every variable by a pattern and then returning a regepx if the final string is not just equal to .*.
-func generateRegexp(invalidMetricName string) (*common.Regexp, error) {
+func generateRegexp(partialMetricName string) (*common.Regexp, error) {
 	// The first step is to replace every variable by a single special char.
 	// We are using a special single char because it will be easier to find if these chars are continuous
 	// or if there are other characters in between.
-	s := replaceVariableRegexp.ReplaceAllString(invalidMetricName, "#")
+	s := replaceVariableRegexp.ReplaceAllString(partialMetricName, "#")
 	s = strings.ReplaceAll(s, ".+", "#")
 	s = strings.ReplaceAll(s, ".*", "#")
 	if s == "#" || len(s) == 0 {
 		// This means the metric name is just a variable and as such can match all metric.
-		// So it's basically impossible to know what this invalid metric name is covering/matching.
+		// So it's basically impossible to know what this partial metric name is covering/matching.
 		return nil, nil
 	}
 	// The next step is to contact every continuous special char '#' to a single one.

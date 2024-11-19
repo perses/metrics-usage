@@ -40,8 +40,8 @@ func (e *endpoint) RegisterRoute(ech *echo.Echo) {
 	ech.GET(path, e.ListMetrics)
 	ech.GET(fmt.Sprintf("%s/:id", path), e.GetMetric)
 
-	ech.POST("/api/v1/invalid_metrics", e.PushMetricsUsage)
-	ech.GET("/api/v1/invalid_metrics", e.ListInvalidMetrics)
+	ech.POST("/api/v1/partial_metrics", e.PushMetricsUsage)
+	ech.GET("/api/v1/partial_metrics", e.ListPartialMetrics)
 	ech.GET("/api/v1/pending_usages", e.ListPendingUsages)
 }
 
@@ -57,14 +57,14 @@ func (e *endpoint) GetMetric(ctx echo.Context) error {
 type request struct {
 	MetricName          string `query:"metric_name"`
 	Used                *bool  `query:"used"`
-	MergeInvalidMetrics bool   `query:"merge_invalid_metrics"`
+	MergePartialMetrics bool   `query:"merge_partial_metrics"`
 }
 
-func (r *request) filter(validMetricList map[string]*v1.Metric, invalidMetricList map[string]*v1.InvalidMetric) map[string]*v1.Metric {
+func (r *request) filter(validMetricList map[string]*v1.Metric, partialMetricList map[string]*v1.PartialMetric) map[string]*v1.Metric {
 	result := make(map[string]*v1.Metric)
 
-	if r.MergeInvalidMetrics {
-		for _, metric := range invalidMetricList {
+	if r.MergePartialMetrics {
+		for _, metric := range partialMetricList {
 			for metricName := range metric.MatchingMetrics {
 				if m, ok := validMetricList[metricName]; ok {
 					m.Usage = v1.MergeUsage(m.Usage, metric.Usage)
@@ -96,9 +96,9 @@ func (e *endpoint) ListMetrics(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
 	}
-	var invalidMetricList map[string]*v1.InvalidMetric
-	if req.MergeInvalidMetrics {
-		invalidMetricList, err = e.db.ListInvalidMetrics()
+	var partialMetricList map[string]*v1.PartialMetric
+	if req.MergePartialMetrics {
+		partialMetricList, err = e.db.ListPartialMetrics()
 		if err != nil {
 			return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
 		}
@@ -107,7 +107,7 @@ func (e *endpoint) ListMetrics(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
 	}
-	return ctx.JSON(http.StatusOK, req.filter(metricList, invalidMetricList))
+	return ctx.JSON(http.StatusOK, req.filter(metricList, partialMetricList))
 }
 
 func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
@@ -119,20 +119,20 @@ func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
 	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
 }
 
-func (e *endpoint) ListInvalidMetrics(ctx echo.Context) error {
-	list, err := e.db.ListInvalidMetrics()
+func (e *endpoint) ListPartialMetrics(ctx echo.Context) error {
+	list, err := e.db.ListPartialMetrics()
 	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
 	}
 	return ctx.JSON(http.StatusOK, list)
 }
 
-func (e *endpoint) PushInvalidMetricsUsage(ctx echo.Context) error {
+func (e *endpoint) PushPartialMetricsUsage(ctx echo.Context) error {
 	data := make(map[string]*v1.MetricUsage)
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
 	}
-	e.db.EnqueueInvalidMetricsUsage(data)
+	e.db.EnqueuePartialMetricsUsage(data)
 	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
 }
 

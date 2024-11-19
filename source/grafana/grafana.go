@@ -88,15 +88,15 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 			continue
 		}
 		c.logger.Debugf("extracting metrics for the dashboard %s with UID %q", h.Title, h.UID)
-		metrics, invalidMetrics, errs := grafana.Analyze(dashboard)
+		metrics, partialMetrics, errs := grafana.Analyze(dashboard)
 		for _, logErr := range errs {
 			logErr.Log(c.logger)
 		}
 		metricUsage := c.generateUsage(metrics, dashboard)
-		invalidMetricsUsage := c.generateUsage(invalidMetrics, dashboard)
+		partialMetricsUsage := c.generateUsage(partialMetrics, dashboard)
 		c.logger.Infof("%d metrics usage has been collected for the dashboard %q with UID %q", len(metricUsage), h.Title, h.UID)
-		c.logger.Infof("%d metrics containing regexp or variable has been collected for the dashboard %q with UID %q", len(invalidMetricsUsage), h.Title, h.UID)
-		c.metricUsageClient.SendUsage(metricUsage, invalidMetricsUsage)
+		c.logger.Infof("%d metrics containing regexp or variable has been collected for the dashboard %q with UID %q", len(partialMetricsUsage), h.Title, h.UID)
+		c.metricUsageClient.SendUsage(metricUsage, partialMetricsUsage)
 	}
 	return nil
 }

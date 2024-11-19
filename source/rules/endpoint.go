@@ -49,15 +49,15 @@ func (e *endpoint) PushRules(ctx echo.Context) error {
 	if err := ctx.Bind(&data); err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
 	}
-	metricUsage, invalidMetricUsage, errs := prometheus.Analyze(data.Groups, data.Source)
+	metricUsage, partialMetricUsage, errs := prometheus.Analyze(data.Groups, data.Source)
 	for _, logErr := range errs {
 		logErr.Log(logrus.StandardLogger().WithField("endpoint", "rules"))
 	}
 	if len(metricUsage) > 0 {
 		e.db.EnqueueUsage(metricUsage)
 	}
-	if len(invalidMetricUsage) > 0 {
-		e.db.EnqueueInvalidMetricsUsage(invalidMetricUsage)
+	if len(partialMetricUsage) > 0 {
+		e.db.EnqueuePartialMetricsUsage(partialMetricUsage)
 	}
 	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
 }

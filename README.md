@@ -80,16 +80,16 @@ The tool provides an API endpoint, `/api/v1/metrics`, which returns the usage da
 You can used the following query parameter to filter the list returned:
 
 * **metric_name**: when used, it will trigger a fuzzy search on the metric_name based on the pattern provided.
-* **used**: when used, will return only the metric used or not (depending if you set this boolean to true or to false). Leave it empty if you want both.
-* **merge_invalid_metrics**: when used, it will use the data from /api/v1/invalid_metrics and merge them here.
+* **used**: when used, will return only the metric used or not (depending on if you set this boolean to true or to false). Leave it empty if you want both.
+* **merge_invalid_metrics**: when used, it will use the data from /api/v1/partial_metrics and merge them here.
 
-### Invalid Metrics
+### Partial Metrics
 
-The API endpoint `/api/v1/invalid_metrics` is exposing the usage for metrics that contains variable or regexp. 
+The API endpoint `/api/v1/partial_metrics` is exposing the usage for metrics that contains variable or regexp. 
 
 ```json
 {
-  "node_cpu_utilization_${instance}": {
+  "node_disk_discard_time_.+": {
     "usage": {
       "alertRules": [
         {
@@ -101,7 +101,7 @@ The API endpoint `/api/v1/invalid_metrics` is exposing the usage for metrics tha
       ]
     }
   },
-  "node_disk_discard_time_.+": {
+  "node_cpu_utilization_${instance}": {
     "usage": {
       "dashboards": [
         "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull"
