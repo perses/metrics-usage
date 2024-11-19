@@ -81,7 +81,7 @@ You can used the following query parameter to filter the list returned:
 
 * **metric_name**: when used, it will trigger a fuzzy search on the metric_name based on the pattern provided.
 * **used**: when used, will return only the metric used or not (depending on if you set this boolean to true or to false). Leave it empty if you want both.
-* **merge_invalid_metrics**: when used, it will use the data from /api/v1/partial_metrics and merge them here.
+* **merge_partial_metrics**: when used, it will use the data from /api/v1/partial_metrics and merge them here.
 
 ### Partial Metrics
 
