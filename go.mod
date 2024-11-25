@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/common v0.60.1
 	github.com/prometheus/prometheus v0.300.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	golang.org/x/oauth2 v0.24.0
 )
 
