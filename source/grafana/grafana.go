@@ -144,10 +144,18 @@ func (c *grafanaCollector) generateUsage(metricNames modelAPIV1.Set[string], cur
 	dashboardURL := fmt.Sprintf("%s/d/%s", c.grafanaURL, currentDashboard.UID)
 	for metricName := range metricNames {
 		if usage, ok := metricUsage[metricName]; ok {
-			usage.Dashboards.Add(dashboardURL)
+			usage.Dashboards.Add(modelAPIV1.DashboardUsage{
+				ID:   currentDashboard.UID,
+				Name: currentDashboard.Title,
+				URL:  dashboardURL,
+			})
 		} else {
 			metricUsage[metricName] = &modelAPIV1.MetricUsage{
-				Dashboards: modelAPIV1.NewSet(dashboardURL),
+				Dashboards: modelAPIV1.NewSet(modelAPIV1.DashboardUsage{
+					ID:   currentDashboard.UID,
+					Name: currentDashboard.Title,
+					URL:  dashboardURL,
+				}),
 			}
 		}
 	}

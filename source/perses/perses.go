@@ -90,10 +90,18 @@ func (c *persesCollector) generateUsage(metricNames modelAPIV1.Set[string], curr
 	dashboardURL := fmt.Sprintf("%s/api/v1/projects/%s/dashboards/%s", c.persesURL, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
 	for metricName := range metricNames {
 		if usage, ok := metricUsage[metricName]; ok {
-			usage.Dashboards.Add(dashboardURL)
+			usage.Dashboards.Add(modelAPIV1.DashboardUsage{
+				ID:   fmt.Sprintf("%s/%s", currentDashboard.Metadata.Project, currentDashboard.Metadata.Name),
+				Name: currentDashboard.Metadata.Name,
+				URL:  dashboardURL,
+			})
 		} else {
 			metricUsage[metricName] = &modelAPIV1.MetricUsage{
-				Dashboards: modelAPIV1.NewSet(dashboardURL),
+				Dashboards: modelAPIV1.NewSet(modelAPIV1.DashboardUsage{
+					ID:   fmt.Sprintf("%s/%s", currentDashboard.Metadata.Project, currentDashboard.Metadata.Name),
+					Name: currentDashboard.Metadata.Name,
+					URL:  dashboardURL,
+				}),
 			}
 		}
 	}
