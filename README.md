@@ -20,10 +20,26 @@ The tool provides an API endpoint, `/api/v1/metrics`, which returns the usage da
   "node_cpu_seconds_total": {
     "usage": {
       "dashboards": [
-        "https://demo.perses.dev/api/v1/projects/myinsight/dashboards/first_demo",
-        "https://demo.perses.dev/api/v1/projects/myworkshopproject/dashboards/myfirstdashboard",
-        "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull",
-        "https://demo.perses.dev/api/v1/projects/showcase/dashboards/statchartpanel"
+        {
+          "id": "myinsight/first_demo",
+          "name": "first_demo",
+          "url": "https://demo.perses.dev/api/v1/projects/myinsight/dashboards/first_demo"
+        },
+        {
+          "id": "myworkshopproject/myfirstdashboard",
+          "name": "myfirstdashboard",
+          "url": "https://demo.perses.dev/api/v1/projects/myworkshopproject/dashboards/myfirstdashboard"
+        },
+        {
+          "id": "perses/nodeexporterfull",
+          "name": "nodeexporterfull",
+          "url": "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull"
+        },
+        {
+          "id": "showcase/statchartpanel",
+          "name": "statchartpanel",
+          "url": "https://demo.perses.dev/api/v1/projects/showcase/dashboards/statchartpanel"
+        }
       ],
       "recordingRules": [
         {
@@ -70,7 +86,11 @@ The tool provides an API endpoint, `/api/v1/metrics`, which returns the usage da
   "node_disk_discard_time_seconds_total": {
     "usage": {
       "dashboards": [
-        "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull"
+        {
+          "id": "perses/nodeexporterfull",
+          "name": "nodeexporterfull",
+          "url": "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull"
+        }
       ]
     }
   }
@@ -104,7 +124,11 @@ The API endpoint `/api/v1/partial_metrics` is exposing the usage for metrics tha
   "node_cpu_utilization_${instance}": {
     "usage": {
       "dashboards": [
-        "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull"
+        {
+          "id": "perses/nodeexporterfull",
+          "name": "nodeexporterfull",
+          "url": "https://demo.perses.dev/api/v1/projects/perses/dashboards/nodeexporterfull"
+        }
       ]
     }
   }
