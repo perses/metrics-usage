@@ -111,10 +111,16 @@ type RuleUsage struct {
 	Expression string `json:"expression"`
 }
 
+type DashboardUsage struct {
+	ID   string `json:"uid"`
+	Name string `json:"title"`
+	URL  string `json:"url"`
+}
+
 type MetricUsage struct {
-	Dashboards     Set[string]    `json:"dashboards,omitempty"`
-	RecordingRules Set[RuleUsage] `json:"recordingRules,omitempty"`
-	AlertRules     Set[RuleUsage] `json:"alertRules,omitempty"`
+	Dashboards     Set[DashboardUsage] `json:"dashboards,omitempty"`
+	RecordingRules Set[RuleUsage]      `json:"recordingRules,omitempty"`
+	AlertRules     Set[RuleUsage]      `json:"alertRules,omitempty"`
 }
 
 func MergeUsage(old, new *MetricUsage) *MetricUsage {
