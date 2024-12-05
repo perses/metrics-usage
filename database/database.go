@@ -290,7 +290,7 @@ func (d *db) matchValidMetric(validMetric string) {
 				continue
 			}
 		}
-		if re.MatchString(validMetric) {
+		if isMatching(re, validMetric) {
 			matchingMetrics := partialMetric.MatchingMetrics
 			if matchingMetrics == nil {
 				matchingMetrics = v1.NewSet[string]()
@@ -301,7 +301,7 @@ func (d *db) matchValidMetric(validMetric string) {
 	}
 }
 
-// GenerateRegexp is taking an partial metric name,
+// GenerateRegexp is taking a partial metric name,
 // will replace every variable by a pattern and then returning a regepx if the final string is not just equal to .*.
 func generateRegexp(partialMetricName string) (*common.Regexp, error) {
 	// The first step is to replace every variable by a single special char.
@@ -330,4 +330,18 @@ func generateRegexp(partialMetricName string) (*common.Regexp, error) {
 	compileString = strings.ReplaceAll(compileString, "#", ".+")
 	re, err := common.NewRegexp(fmt.Sprintf("^%s$", compileString))
 	return &re, err
+}
+
+func isMatching(re *common.Regexp, metric string) bool {
+	if !re.MatchString(metric) {
+		return false
+	}
+	// We are taking some time to look at what is matching.
+	// We are doing that to avoid the situation where this regexp `foo|` is matching everything.
+	for _, match := range re.FindAllString(metric, -1) {
+		if len(match) > 0 {
+			return true
+		}
+	}
+	return false
 }
