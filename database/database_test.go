@@ -66,3 +66,12 @@ func TestGenerateRegexp(t *testing.T) {
 		})
 	}
 }
+
+func TestIsMatching(t *testing.T) {
+	re, _ := generateRegexp("foo|")
+	assert.False(t, isMatching(re, "bar"))
+	assert.True(t, isMatching(re, "foo"))
+
+	re, _ = generateRegexp("foo|bar")
+	assert.True(t, isMatching(re, "bar"))
+}
