@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: perses/github-actions@v0.7.1
+      - uses: perses/github-actions@v0.8.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
