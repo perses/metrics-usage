@@ -57,6 +57,7 @@ func (e *endpoint) GetMetric(ctx echo.Context) error {
 type request struct {
 	MetricName          string `query:"metric_name"`
 	Used                *bool  `query:"used"`
+	ExactMatch          bool   `query:"exact_match"`
 	MergePartialMetrics bool   `query:"merge_partial_metrics"`
 }
 
@@ -77,7 +78,7 @@ func (r *request) filter(validMetricList map[string]*v1.Metric, partialMetricLis
 		return validMetricList
 	}
 	for k, v := range validMetricList {
-		if len(r.MetricName) == 0 || fuzzy.Match(r.MetricName, k) {
+		if len(r.MetricName) == 0 || (r.ExactMatch && r.MetricName == k) || (!r.ExactMatch && fuzzy.Match(r.MetricName, k)) {
 			if r.Used == nil {
 				result[k] = v
 			} else if *r.Used && validMetricList[k].Usage != nil {
