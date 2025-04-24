@@ -43,16 +43,19 @@ func NewCollector(db database.Database, cfg config.PersesCollector) (async.Simpl
 		}
 	}
 	logger := logrus.StandardLogger().WithField("collector", "perses")
+	url := cfg.HTTPClient.URL
+	if cfg.PublicURL != nil {
+		url = cfg.PublicURL
+	}
 	return &persesCollector{
-		SimpleTask:   nil,
+		persesURL:    url.String(),
 		persesClient: persesClientV1.NewWithClient(restClient).Dashboard(""),
 		metricUsageClient: &usageclient.Client{
 			DB:                db,
 			MetricUsageClient: metricUsageClient,
 			Logger:            logger,
 		},
-		persesURL: cfg.HTTPClient.URL.String(),
-		logger:    logger,
+		logger: logger,
 	}, nil
 }
 
