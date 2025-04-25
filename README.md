@@ -99,8 +99,12 @@ The tool provides an API endpoint, `/api/v1/metrics`, which returns the usage da
 
 You can use the following query parameter to filter the list returned:
 
-* **metric_name**: when used, it will trigger a fuzzy search on the metric_name based on the pattern provided.
+* **metric_name**: when used, it will trigger a fuzzy match search on the metric_name or exact/regex match if you enable it with `mode` parameter.
 * **used**: when used, will return only the metric used or not (depending on if you set this boolean to true or to false). Leave it empty if you want both.
+* **mode**: when used change mode for filtering metrics. Three values are available:
+  * **exact**: doing exact match (case sensitive) based on the metric name
+  * **fuzzy**: doing fuzzy match based on the metric name
+  * **regex**: doing regex match based on the metric name
 * **merge_partial_metrics**: when used, it will use the data from /api/v1/partial_metrics and merge them here.
 
 ### Partial Metrics

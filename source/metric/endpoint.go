@@ -16,6 +16,7 @@ package metric
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 
 	"github.com/labstack/echo/v4"
 	"github.com/lithammer/fuzzysearch/fuzzy"
@@ -54,10 +55,37 @@ func (e *endpoint) GetMetric(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, metric)
 }
 
+type Mode string
+
+const (
+	ExactMatch Mode = "exact"
+	FuzzyMatch Mode = "fuzzy"
+	RegexMatch Mode = "regex"
+)
+
 type request struct {
 	MetricName          string `query:"metric_name"`
+	Mode                Mode   `query:"mode"`
 	Used                *bool  `query:"used"`
 	MergePartialMetrics bool   `query:"merge_partial_metrics"`
+}
+
+func isMetricMatching(metricName string, matchMode Mode, filter string) bool {
+	switch matchMode {
+	case ExactMatch:
+		return metricName == filter
+	case FuzzyMatch:
+		return fuzzy.Match(filter, metricName)
+	case RegexMatch:
+		re, err := regexp.Compile(filter)
+		if err != nil {
+			return false
+		}
+		return re.MatchString(metricName)
+	default:
+		// if no match mode is specified, we assume fuzzy match
+		return fuzzy.Match(filter, metricName)
+	}
 }
 
 func (r *request) filter(validMetricList map[string]*v1.Metric, partialMetricList map[string]*v1.PartialMetric) map[string]*v1.Metric {
@@ -77,7 +105,7 @@ func (r *request) filter(validMetricList map[string]*v1.Metric, partialMetricLis
 		return validMetricList
 	}
 	for k, v := range validMetricList {
-		if len(r.MetricName) == 0 || fuzzy.Match(r.MetricName, k) {
+		if len(r.MetricName) == 0 || isMetricMatching(k, r.Mode, r.MetricName) {
 			if r.Used == nil {
 				result[k] = v
 			} else if *r.Used && validMetricList[k].Usage != nil {
@@ -95,6 +123,9 @@ func (e *endpoint) ListMetrics(ctx echo.Context) error {
 	err := ctx.Bind(req)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+	}
+	if req.Mode != "" && req.Mode != ExactMatch && req.Mode != FuzzyMatch && req.Mode != RegexMatch {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": fmt.Sprintf("invalid match mode: %s. Allowed: %s, %s or %s", req.Mode, ExactMatch, FuzzyMatch, RegexMatch)})
 	}
 	var partialMetricList map[string]*v1.PartialMetric
 	if req.MergePartialMetrics {
