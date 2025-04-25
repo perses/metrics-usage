@@ -41,16 +41,21 @@ func NewCollector(db database.Database, cfg *config.RulesCollector) (async.Simpl
 		}
 	}
 	logger := logrus.StandardLogger().WithField("collector", "rules")
+	url := cfg.HTTPClient.URL.URL
+	if cfg.PublicURL != nil {
+		url = cfg.PublicURL.URL
+	}
+
 	return &rulesCollector{
+		promURL:    url.String(),
 		promClient: promClient,
 		metricUsageClient: &usageclient.Client{
 			DB:                db,
 			MetricUsageClient: metricUsageClient,
 			Logger:            logger,
 		},
-		promURL: cfg.HTTPClient.URL.String(),
-		logger:  logger,
-		retry:   cfg.RetryToGetRules,
+		logger: logger,
+		retry:  cfg.RetryToGetRules,
 	}, nil
 }
 

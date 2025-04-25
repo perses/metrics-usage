@@ -114,8 +114,9 @@ type RulesCollector struct {
 	MetricUsageClient *HTTPClient `yaml:"metric_usage_client,omitempty"`
 	// RetryToGetRules is the number of retries the collector will do to get the rules from Prometheus before actually failing.
 	// Between each retry, the collector will wait first 10 seconds, then 20 seconds, then 30 seconds ...etc.
-	RetryToGetRules uint       `yaml:"retry_to_get_rules,omitempty"`
-	HTTPClient      HTTPClient `yaml:"prometheus_client"`
+	RetryToGetRules uint        `yaml:"retry_to_get_rules,omitempty"`
+	HTTPClient      HTTPClient  `yaml:"prometheus_client"`
+	PublicURL       *common.URL `yaml:"public_url,omitempty"`
 }
 
 func (c *RulesCollector) Verify() error {
@@ -166,6 +167,7 @@ type PersesCollector struct {
 	Period            model.Duration          `yaml:"period,omitempty"`
 	MetricUsageClient *HTTPClient             `yaml:"metric_usage_client,omitempty"`
 	HTTPClient        config.RestConfigClient `yaml:"perses_client"`
+	PublicURL         *common.URL             `yaml:"public_url,omitempty"`
 }
 
 func (c *PersesCollector) Verify() error {
@@ -189,6 +191,7 @@ type GrafanaCollector struct {
 	Period            model.Duration `yaml:"period,omitempty"`
 	MetricUsageClient *HTTPClient    `yaml:"metric_usage_client,omitempty"`
 	HTTPClient        HTTPClient     `yaml:"grafana_client"`
+	PublicURL         *common.URL    `yaml:"public_url,omitempty"`
 }
 
 func (c *GrafanaCollector) Verify() error {

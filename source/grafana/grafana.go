@@ -34,10 +34,11 @@ import (
 
 func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.SimpleTask, error) {
 	httpClient, err := config.NewHTTPClient(cfg.HTTPClient)
-	url := cfg.HTTPClient.URL.URL
 	if err != nil {
 		return nil, err
 	}
+	url := cfg.HTTPClient.URL.URL
+
 	var metricUsageClient client.Client
 	if cfg.MetricUsageClient != nil {
 		metricUsageClient, err = client.New(*cfg.MetricUsageClient)
@@ -53,6 +54,10 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.Simp
 	}
 	grafanaClient := grafanaapi.NewHTTPClientWithConfig(strfmt.Default, transportConfig)
 	logger := logrus.StandardLogger().WithField("collector", "grafana")
+
+	if cfg.PublicURL != nil {
+		url = cfg.PublicURL.URL
+	}
 	return &grafanaCollector{
 		grafanaURL:    url.String(),
 		grafanaClient: grafanaClient,
