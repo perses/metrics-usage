@@ -83,8 +83,8 @@ func isMetricMatching(metricName string, matchMode Mode, filter string) bool {
 		}
 		return re.MatchString(metricName)
 	default:
-		// if no match mode is specified, we assume fuzzy match
-		return fuzzy.Match(filter, metricName)
+		// if no match mode is specified, we assume exact match
+		return metricName == filter
 	}
 }
 
