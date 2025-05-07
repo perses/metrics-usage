@@ -302,7 +302,7 @@ func replaceVariables(expr string, staticVariables *strings.Replacer) string {
 // It will be useful for later when we want to know which metrics, this metric with variable is covered.
 func formatVariableInMetricName(metric string, variables modelAPIV1.Set[string]) string {
 	for v := range variables {
-		metric = strings.Replace(metric, fmt.Sprintf("$%s", v), fmt.Sprintf("${%s}", v), -1)
+		metric = strings.ReplaceAll(metric, fmt.Sprintf("$%s", v), fmt.Sprintf("${%s}", v))
 	}
 	return metric
 }
