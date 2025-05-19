@@ -30,9 +30,14 @@ type Database struct {
 	Path string `yaml:"path,omitempty"`
 	// FlushPeriod defines the frequency the system will flush the data into the JSON file
 	FlushPeriod model.Duration `yaml:"flush_period,omitempty"`
+	// Threshold is the number of times we didn't see a metric before removing it from the database.
+	Threshold uint8 `yaml:"threshold,omitempty"`
 }
 
 func (d *Database) Verify() error {
+	if d.Threshold == 0 {
+		d.Threshold = 2
+	}
 	var inMemory = true
 	if d.InMemory == nil {
 		d.InMemory = &inMemory
