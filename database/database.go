@@ -32,6 +32,7 @@ import (
 var replaceVariableRegexp = regexp.MustCompile(`\$\{[a-zA-Z0-9_:]+}`)
 
 type Database interface {
+	DeleteMetric(name string) bool
 	GetMetric(name string) *v1.Metric
 	ListMetrics() (map[string]*v1.Metric, error)
 	ListPartialMetrics() (map[string]*v1.PartialMetric, error)
@@ -112,6 +113,16 @@ type db struct {
 	// Like that we have two different ways to read and write the data.
 	metricsMutex             sync.Mutex
 	partialMetricsUsageMutex sync.Mutex
+}
+
+func (d *db) DeleteMetric(name string) bool {
+	d.metricsMutex.Lock()
+	defer d.metricsMutex.Unlock()
+	if _, ok := d.metrics[name]; !ok {
+		return false
+	}
+	d.deleteMetric(name)
+	return true
 }
 
 func (d *db) GetMetric(name string) *v1.Metric {
