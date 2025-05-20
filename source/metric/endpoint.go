@@ -40,6 +40,7 @@ func (e *endpoint) RegisterRoute(ech *echo.Echo) {
 	ech.POST(path, e.PushMetricsUsage)
 	ech.GET(path, e.ListMetrics)
 	ech.GET(fmt.Sprintf("%s/:id", path), e.GetMetric)
+	ech.DELETE(fmt.Sprintf("%s/:id", path), e.DeleteMetric)
 
 	ech.POST("/api/v1/partial_metrics", e.PushMetricsUsage)
 	ech.GET("/api/v1/partial_metrics", e.ListPartialMetrics)
@@ -53,6 +54,14 @@ func (e *endpoint) GetMetric(ctx echo.Context) error {
 		return echo.NewHTTPError(http.StatusNotFound)
 	}
 	return ctx.JSON(http.StatusOK, metric)
+}
+
+func (e *endpoint) DeleteMetric(ctx echo.Context) error {
+	name := ctx.Param("id")
+	if !e.db.DeleteMetric(name) {
+		return echo.NewHTTPError(http.StatusNotFound)
+	}
+	return ctx.NoContent(http.StatusNoContent)
 }
 
 type Mode string

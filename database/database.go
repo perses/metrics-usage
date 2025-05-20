@@ -32,6 +32,7 @@ import (
 var replaceVariableRegexp = regexp.MustCompile(`\$\{[a-zA-Z0-9_:]+}`)
 
 type Database interface {
+	DeleteMetric(name string) bool
 	GetMetric(name string) *v1.Metric
 	ListMetrics() (map[string]*v1.Metric, error)
 	ListPartialMetrics() (map[string]*v1.PartialMetric, error)
@@ -45,6 +46,8 @@ type Database interface {
 func New(cfg config.Database) Database {
 	d := &db{
 		metrics:                  make(map[string]*v1.Metric),
+		metricLastTimeSeen:       make(map[string]uint8),
+		threshold:                cfg.Threshold,
 		partialMetrics:           make(map[string]*v1.PartialMetric),
 		usage:                    make(map[string]*v1.MetricUsage),
 		usageQueue:               make(chan map[string]*v1.MetricUsage, 250),
@@ -69,9 +72,16 @@ func New(cfg config.Database) Database {
 
 type db struct {
 	Database
-	// metrics is the list of metric name (as a key) associated to their usage based on the different collector activated.
+	// metrics is the list of metric name (as a key) associated with their usage based on the different collector activated.
 	// This struct is our "database".
 	metrics map[string]*v1.Metric
+	// metricLastTimeSeen is the list of the metric associated with a counter.
+	// The counter represents the number of times we didn't see the metric.
+	// Once a counter reaches a certain threshold, we will remove the metric from the database.
+	// Note: the size of this map is the same as the size of metrics.
+	metricLastTimeSeen map[string]uint8
+	// threshold is the number of times we didn't see a metric before removing it from the database.
+	threshold uint8
 	// partialMetrics is the list of metric name that likely contains a variable or a regexp and as such cannot be a valid metric name.
 	partialMetrics map[string]*v1.PartialMetric
 	// usage is a buffer in case the metric name has not yet been collected
@@ -95,7 +105,7 @@ type db struct {
 	// It is empty if the database is purely in memory.
 	path string
 	// We are expecting to spend more time to write data than actually read.
-	// Which result having too many writers,
+	// Which results in having too many writers
 	// and so unable to read the data because the lock queue is too long to be able to access to the data.
 	// If this scenario happens,
 	// 1. Then let's flush the data into a file periodically (or once the queue is empty (if it happens))
@@ -103,6 +113,16 @@ type db struct {
 	// Like that we have two different ways to read and write the data.
 	metricsMutex             sync.Mutex
 	partialMetricsUsageMutex sync.Mutex
+}
+
+func (d *db) DeleteMetric(name string) bool {
+	d.metricsMutex.Lock()
+	defer d.metricsMutex.Unlock()
+	if _, ok := d.metrics[name]; !ok {
+		return false
+	}
+	d.deleteMetric(name)
+	return true
 }
 
 func (d *db) GetMetric(name string) *v1.Metric {
@@ -145,15 +165,28 @@ func (d *db) EnqueueLabels(labels map[string][]string) {
 	d.labelsQueue <- labels
 }
 
+// watchMetricsQueue is the way to store the metric name in the database.
 func (d *db) watchMetricsQueue() {
 	for metricsName := range d.metricsQueue {
 		d.metricsMutex.Lock()
+		// We are not simply storing the metric here.
+		// While we are doing that, we are also checking if during the time to collect the metric we didn't already receive usage of the metrics.
+		// If it's the case, then we can already associate a usage with the metric.
+		// We are also re-setting the counter that tells us when it is the last time we saw the metric.
+		//
+		// First, let's increase the counter for every previous metric stored.
+		for metricName := range d.metricLastTimeSeen {
+			d.metricLastTimeSeen[metricName]++
+		}
+
+		// Then, we are looping other the metrics received and check if we already have them in the database.
 		for _, metricName := range metricsName {
 			if _, ok := d.metrics[metricName]; !ok {
 				// As this queue only serves the purpose of storing missing metrics, we are only looking for the one not already present in the database.
 				d.metrics[metricName] = &v1.Metric{
 					Labels: make(v1.Set[string]),
 				}
+				// This will be used to associate a metric with a partial one.
 				d.matchValidMetric(metricName)
 				// Since it's a new metric, potentially we already have a usage stored in the buffer.
 				if usage, usageExists := d.usage[metricName]; usageExists {
@@ -162,6 +195,15 @@ func (d *db) watchMetricsQueue() {
 					delete(d.usage, metricName)
 				}
 			}
+			// In any case, whether the metric is already known or not, we are re-setting the counter.
+			d.metricLastTimeSeen[metricName] = 0
+		}
+		// Finally, we are looping other all counters and remove metrics not seen since a while.
+		for metricName, counter := range d.metricLastTimeSeen {
+			if counter < d.threshold {
+				continue
+			}
+			d.deleteMetric(metricName)
 		}
 		d.metricsMutex.Unlock()
 	}
@@ -251,6 +293,20 @@ func (d *db) readMetricsInJSONFile() error {
 		return err
 	}
 	return json.Unmarshal(data, &d.metrics)
+}
+
+func (d *db) deleteMetric(name string) {
+	// This method does not lock the mutex associated with the metrics
+	// because it is supposed to be called from a parent function that already did it.
+	delete(d.metrics, name)
+	delete(d.metricLastTimeSeen, name)
+	d.partialMetricsUsageMutex.Lock()
+	defer d.partialMetricsUsageMutex.Unlock()
+	for _, partialMetric := range d.partialMetrics {
+		if partialMetric.MatchingMetrics.Contains(name) {
+			partialMetric.MatchingMetrics.Remove(name)
+		}
+	}
 }
 
 func (d *db) matchPartialMetric(partialMetric string) (*common.Regexp, v1.Set[string]) {
