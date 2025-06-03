@@ -5,7 +5,7 @@ go 1.23.4
 toolchain go1.23.8
 
 require (
-	github.com/brunoga/deep v1.2.4
+	github.com/brunoga/deep v1.2.5
 	github.com/go-openapi/strfmt v0.23.0
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20241113095943-9cb2bbfeb8a3
 	github.com/labstack/echo/v4 v4.13.4
