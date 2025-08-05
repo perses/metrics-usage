@@ -1,17 +1,17 @@
 metric_collector:
   enable: true
   http_client:
-    url: "https://prometheus.demo.do.prometheus.io"
+    url: "https://prometheus.demo.prometheus.io"
 
 rules_collectors:
   - enable: true
     prometheus_client:
-      url: "https://prometheus.demo.do.prometheus.io"
+      url: "https://prometheus.demo.prometheus.io"
 
 labels_collectors:
   - enable: true
     prometheus_client:
-      url: "https://prometheus.demo.do.prometheus.io"
+      url: "https://prometheus.demo.prometheus.io"
 
 perses_collector:
   enable: true
