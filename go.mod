@@ -1,8 +1,6 @@
 module github.com/perses/metrics-usage
 
-go 1.23.4
-
-toolchain go1.23.8
+go 1.24.0
 
 require (
 	github.com/brunoga/deep v1.2.5
