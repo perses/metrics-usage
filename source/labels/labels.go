@@ -60,7 +60,7 @@ type labelCollector struct {
 func (c *labelCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	now := time.Now()
 	start := now.Add(time.Duration(-c.period))
-	labelValues, _, err := c.promClient.LabelValues(ctx, "__name__", nil, start, now)
+	labelValues, _, err := c.promClient.LabelValues(ctx, model.MetricNameLabel, nil, start, now)
 	if err != nil {
 		c.logger.WithError(err).Error("failed to query metrics")
 		return nil
@@ -94,7 +94,7 @@ func (c *labelCollector) String() string {
 
 func removeLabelName(labels []string) []string {
 	for i, label := range labels {
-		if label == "__name__" {
+		if label == model.MetricNameLabel {
 			return append(labels[:i], labels[i+1:]...)
 		}
 	}

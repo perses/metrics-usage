@@ -50,7 +50,7 @@ type metricCollector struct {
 func (c *metricCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	now := time.Now()
 	start := now.Add(time.Duration(-c.period))
-	labelValues, _, err := c.client.LabelValues(ctx, "__name__", nil, start, now)
+	labelValues, _, err := c.client.LabelValues(ctx, model.MetricNameLabel, nil, start, now)
 	if err != nil {
 		c.logger.WithError(err).Error("failed to query metrics")
 		return nil
