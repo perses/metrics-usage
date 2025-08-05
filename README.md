@@ -109,7 +109,7 @@ You can use the following query parameter to filter the list returned:
 
 ### Partial Metrics
 
-The API endpoint `/api/v1/partial_metrics` is exposing the usage for metrics that contains variable or regexp. 
+The API endpoint `/api/v1/partial_metrics` is exposing the usage for metrics that contains variable or regexp.
 
 ```json
 {
@@ -141,7 +141,7 @@ The API endpoint `/api/v1/partial_metrics` is exposing the usage for metrics tha
 
 ### Pending Usage
 
-The API endpoint `/api/v1/pending_usages` is exposing usage associated to metrics that has not yet been associated to the metrics available on the endpoint `/api/v1/metrics`. 
+The API endpoint `/api/v1/pending_usages` is exposing usage associated to metrics that has not yet been associated to the metrics available on the endpoint `/api/v1/metrics`.
 
 It's even possible usage is never associated as the metric doesn't exist anymore.
 
@@ -180,6 +180,25 @@ metric_collector:
     url: "https://prometheus.demo.do.prometheus.io"
 ```
 
+### Prometheus Labels Collector
+
+This collector retrieves Prometheus labels using the HTTP API and enriches metrics with label names.
+
+Multiple labels collectors can be configured for different Prometheus/Thanos instances.
+
+#### Configuration
+
+> Refer to the complete configuration [here](./docs/configuration.md#labels_collector-config)
+
+Example:
+
+```yaml
+labels_collectors:
+  - enable: true
+    prometheus_client:
+      url: "https://prometheus.demo.do.prometheus.io"
+```
+
 ### Prometheus Rule Collector
 
 This collector retrieves Prometheus rule groups using the HTTP API and extracts metrics from alerting & recording rules.
@@ -190,7 +209,7 @@ Multiple rule collectors can be configured for different Prometheus/Thanos insta
 
 > Refer to the complete configuration [here](./docs/configuration.md#rules_collector-config)
 
-Example: 
+Example:
 
 ```yaml
 rules_collectors:

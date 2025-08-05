@@ -47,7 +47,7 @@ Generic placeholders are defined as follows:
 ```yaml
 [ database: <Database Config> ]
 [ metric_collector: <Metric_Collector config> ]
-[ rules_collectors: 
+[ rules_collectors:
   - <Rule_Collector config> ]
 [ perses_collector: <Perses_Collector config> ]
 [ grafana_collector: <Grafana_Collector config> ]
@@ -74,12 +74,25 @@ Generic placeholders are defined as follows:
 http_client: <HTTPClient config>
 ```
 
+### Labels_Collector Config
+
+```yaml
+[ enable: <boolean> | default=false ]
+[ period: <duration> | default="12h" ]
+
+# It is a client to send the labels to a remote metrics_usage server.
+[ metric_usage_client: <HTTPClient config> ]
+
+# The prometheus client used to retrieve the labels.
+prometheus_client: <HTTPClient config>
+```
+
 ### Rules_Collector Config
 
 ```yaml
 [ enable: <boolean> | default=false ]
 [ period: <duration> | default="12h" ]
-  
+
 # It is a client to send the metrics usage to a remote metrics_usage server.
 [ metric_usage_client: <HTTPClient config> ]
 
