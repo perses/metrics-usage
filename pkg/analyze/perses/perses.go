@@ -21,12 +21,12 @@ import (
 	"github.com/perses/metrics-usage/pkg/analyze/parser"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
-	"github.com/perses/perses/go-sdk/prometheus/query"
-	"github.com/perses/perses/go-sdk/prometheus/variable/promql"
 	v1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/dashboard"
 	"github.com/perses/perses/pkg/model/api/v1/variable"
+	"github.com/perses/plugins/prometheus/sdk/go/query"
+	"github.com/perses/plugins/prometheus/sdk/go/variable/promql"
 )
 
 var variableReplacer = strings.NewReplacer(
