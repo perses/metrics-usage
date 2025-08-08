@@ -28,6 +28,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const defaultRetryInterval = 10 * time.Second
+
 func NewCollector(db database.Database, cfg *config.RulesCollector) (async.SimpleTask, error) {
 	promClient, err := promUtils.NewClient(cfg.HTTPClient)
 	if err != nil {
@@ -89,23 +91,30 @@ func (c *rulesCollector) String() string {
 }
 
 func (c *rulesCollector) getRules(ctx context.Context) (v1.RulesResult, error) {
-	waitDuration := 10 * time.Second
+	waitDuration := defaultRetryInterval
 	retry := c.retry
-	doRetry := true
 	var err error
 	var result v1.RulesResult
-	for doRetry && retry > 0 {
-		result, err = c.promClient.Rules(ctx)
-		if err != nil {
-			doRetry = true
-			retry--
-			c.logger.WithError(err).Debug("Failed to get rules, retrying...")
-			time.Sleep(waitDuration)
-			waitDuration = waitDuration + 10*time.Second
-		} else {
-			c.logger.Infof("successfuly get the rules")
-			doRetry = false
+	for retry > 0 {
+		if err = ctx.Err(); err != nil {
+			break
 		}
+
+		result, err = c.promClient.Rules(ctx)
+		if err == nil {
+			c.logger.Infof("successfuly get the rules")
+			break
+		}
+
+		retry--
+		c.logger.WithError(err).Infof("Failed to get rules, retrying in %s (%d attempts left)...", waitDuration.String(), retry)
+
+		// Wait for the retry interval or the main context cancellation.
+		waitCtx, cancel := context.WithTimeout(ctx, waitDuration)
+		<-waitCtx.Done()
+		cancel()
+
+		waitDuration = waitDuration + defaultRetryInterval
 	}
 	return result, err
 }
