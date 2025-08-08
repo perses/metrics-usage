@@ -139,8 +139,9 @@ func (c *RulesCollector) Verify() error {
 }
 
 type LabelsCollector struct {
-	Enable bool           `yaml:"enable"`
-	Period model.Duration `yaml:"period,omitempty"`
+	Enable      bool           `yaml:"enable"`
+	Period      model.Duration `yaml:"period,omitempty"`
+	Concurrency int            `yaml:"concurrency,omitempty"`
 	// MetricUsageClient is a client to send the metrics usage to a remote metrics_usage server.
 	MetricUsageClient *HTTPClient `yaml:"metric_usage_client,omitempty"`
 	HTTPClient        HTTPClient  `yaml:"prometheus_client"`
@@ -153,11 +154,14 @@ func (c *LabelsCollector) Verify() error {
 	if c.Period <= 0 {
 		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
 	}
+	if c.Concurrency <= 0 {
+		c.Concurrency = 1
+	}
 	if c.HTTPClient.URL == nil {
-		return fmt.Errorf("missing Prometheus URL for the rules collector")
+		return fmt.Errorf("missing Prometheus URL for the labels collector")
 	}
 	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
-		return fmt.Errorf("missing Metrics Usage URL for the rules collector")
+		return fmt.Errorf("missing Metrics Usage URL for the labels collector")
 	}
 	return nil
 }

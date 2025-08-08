@@ -15,6 +15,7 @@ package labels
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/perses/common/async"
@@ -44,6 +45,7 @@ func NewCollector(db database.Database, cfg *config.LabelsCollector) (async.Simp
 		db:                db,
 		metricUsageClient: metricUsageClient,
 		period:            cfg.Period,
+		concurrency:       cfg.Concurrency,
 		logger:            logrus.StandardLogger().WithField("collector", "labels"),
 	}, nil
 }
@@ -54,6 +56,7 @@ type labelCollector struct {
 	db                database.Database
 	metricUsageClient client.Client
 	period            model.Duration
+	concurrency       int
 	logger            *logrus.Entry
 }
 
@@ -65,26 +68,40 @@ func (c *labelCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 		c.logger.WithError(err).Error("failed to query metrics")
 		return nil
 	}
-	result := make(map[string][]string)
+
+	var (
+		mtx    sync.Mutex
+		ch     = make(chan struct{}, c.concurrency)
+		result = make(map[string][]string, len(labelValues))
+	)
 	for _, metricName := range labelValues {
-		c.logger.Debugf("querying Prometheus to get label names for metric %s", metricName)
-		labels, _, queryErr := c.promClient.LabelNames(ctx, []string{string(metricName)}, start, now)
-		if queryErr != nil {
-			c.logger.WithError(queryErr).Errorf("failed to query labels for the metric %q", metricName)
-			continue
-		}
-		result[string(metricName)] = removeLabelName(labels)
-	}
-	if len(result) > 0 {
-		if c.metricUsageClient != nil {
-			// In this case, that means we have to send the data to a remote server.
-			if sendErr := c.metricUsageClient.Labels(result); sendErr != nil {
-				c.logger.WithError(sendErr).Error("Failed to send labels name")
+		ch <- struct{}{}
+		go func() {
+			labels := c.getLabelsForMetric(ctx, string(metricName), start, now)
+			<-ch
+			if len(labels) == 0 {
+				return
 			}
-		} else {
-			c.db.EnqueueLabels(result)
-		}
+
+			mtx.Lock()
+			result[string(metricName)] = labels
+			mtx.Unlock()
+		}()
 	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	if c.metricUsageClient != nil {
+		// In this case, that means we have to send the data to a remote server.
+		if sendErr := c.metricUsageClient.Labels(result); sendErr != nil {
+			c.logger.WithError(sendErr).Error("Failed to send labels name")
+		}
+		return nil
+	}
+
+	c.db.EnqueueLabels(result)
 	return nil
 }
 
@@ -99,4 +116,15 @@ func removeLabelName(labels []string) []string {
 		}
 	}
 	return labels
+}
+
+func (c *labelCollector) getLabelsForMetric(ctx context.Context, metricName string, start, end time.Time) []string {
+	c.logger.Debugf("querying Prometheus to get label names for metric %s", metricName)
+	labels, _, queryErr := c.promClient.LabelNames(ctx, []string{string(metricName)}, start, end)
+	if queryErr != nil {
+		c.logger.WithError(queryErr).Errorf("failed to query labels for the metric %q", metricName)
+		return nil
+	}
+
+	return removeLabelName(labels)
 }

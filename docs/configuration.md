@@ -79,6 +79,7 @@ http_client: <HTTPClient config>
 ```yaml
 [ enable: <boolean> | default=false ]
 [ period: <duration> | default="12h" ]
+[ concurrency: <int> | default=1 ]
 
 # It is a client to send the labels to a remote metrics_usage server.
 [ metric_usage_client: <HTTPClient config> ]
