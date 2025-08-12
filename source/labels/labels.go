@@ -71,12 +71,15 @@ func (c *labelCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 
 	var (
 		mtx    sync.Mutex
+		wg     sync.WaitGroup
 		ch     = make(chan struct{}, c.concurrency)
 		result = make(map[string][]string, len(labelValues))
 	)
+	wg.Add(len(labelValues))
 	for _, metricName := range labelValues {
 		ch <- struct{}{}
 		go func() {
+			defer wg.Done()
 			labels := c.getLabelsForMetric(ctx, string(metricName), start, now)
 			<-ch
 			if len(labels) == 0 {
@@ -88,6 +91,7 @@ func (c *labelCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 			mtx.Unlock()
 		}()
 	}
+	wg.Wait()
 
 	if len(result) == 0 {
 		return nil
