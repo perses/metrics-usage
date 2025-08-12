@@ -154,10 +154,10 @@ func (c *LabelsCollector) Verify() error {
 		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
 	}
 	if c.HTTPClient.URL == nil {
-		return fmt.Errorf("missing Prometheus URL for the rules collector")
+		return fmt.Errorf("missing Prometheus URL for the labels collector")
 	}
 	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
-		return fmt.Errorf("missing Metrics Usage URL for the rules collector")
+		return fmt.Errorf("missing Metrics Usage URL for the labels collector")
 	}
 	return nil
 }
@@ -181,7 +181,7 @@ func (c *PersesCollector) Verify() error {
 		return fmt.Errorf("missing Rest URL for the perses collector")
 	}
 	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
-		return fmt.Errorf("missing Metrics Usage URL for the rules collector")
+		return fmt.Errorf("missing Metrics Usage URL for the perses collector")
 	}
 	return nil
 }
@@ -202,10 +202,10 @@ func (c *GrafanaCollector) Verify() error {
 		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
 	}
 	if c.HTTPClient.URL == nil {
-		return fmt.Errorf("missing Rest URL for the perses collector")
+		return fmt.Errorf("missing Rest URL for the grafana collector")
 	}
 	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
-		return fmt.Errorf("missing Metrics Usage URL for the rules collector")
+		return fmt.Errorf("missing Metrics Usage URL for the grafana collector")
 	}
 	return nil
 }
