@@ -142,6 +142,17 @@ func buildKey(v reflect.Value) string {
 	return key.String()
 }
 
+type MetricStatistics struct {
+	Period                     uint64       `json:"period"`
+	SeriesCount                uint64       `json:"series_count"`
+	LabelValueCountByLabelName []LabelCount `json:"label_value_count_by_label_name,omitempty"`
+}
+
+type LabelCount struct {
+	Name  string `json:"name"`
+	Value uint64 `json:"value"`
+}
+
 type RuleUsage struct {
 	PromLink   string `json:"prom_link"`
 	GroupName  string `json:"group_name"`
@@ -176,8 +187,9 @@ func MergeUsage(old, new *MetricUsage) *MetricUsage {
 }
 
 type Metric struct {
-	Labels Set[string]  `json:"labels,omitempty"`
-	Usage  *MetricUsage `json:"usage,omitempty"`
+	Labels     Set[string]       `json:"labels,omitempty"`
+	Statistics *MetricStatistics `json:"statistics,omitempty"`
+	Usage      *MetricUsage      `json:"usage,omitempty"`
 }
 
 type PartialMetric struct {

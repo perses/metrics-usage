@@ -61,6 +61,7 @@ type Config struct {
 	LabelsCollectors []*LabelsCollector `yaml:"labels_collectors,omitempty"`
 	PersesCollector  PersesCollector    `yaml:"perses_collector,omitempty"`
 	GrafanaCollector GrafanaCollector   `yaml:"grafana_collector,omitempty"`
+	TSDBCollectors   []TSDBCollector    `yaml:"tsdb_collectors,omitempty"`
 }
 
 func Resolve(configFile string) (Config, error) {
