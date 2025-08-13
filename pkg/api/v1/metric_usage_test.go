@@ -36,7 +36,7 @@ func TestJSONMarshalMetricUsage(t *testing.T) {
 			usage: &MetricUsage{
 				AlertRules: NewSet(RuleUsage{Name: "foo"}, RuleUsage{Name: "bar"}),
 			},
-			expectedJSON: `{"alertRules":[{"prom_link":"","group_name":"","name":"foo","expression":""},{"prom_link":"","group_name":"","name":"bar","expression":""}]}`,
+			expectedJSON: `{"alertRules":[{"prom_link":"","group_name":"","name":"bar","expression":""},{"prom_link":"","group_name":"","name":"foo","expression":""}]}`,
 		},
 	}
 	for _, test := range testSuite {
