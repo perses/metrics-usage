@@ -14,7 +14,11 @@
 package v1
 
 import (
+	"cmp"
 	"encoding/json"
+	"reflect"
+	"slices"
+	"strings"
 
 	"github.com/perses/perses/pkg/model/api/v1/common"
 )
@@ -71,22 +75,22 @@ func (s Set[T]) TransformAsSlice() []T {
 	if s == nil {
 		return nil
 	}
+
 	var slice []T
 	for v := range s {
 		slice = append(slice, v)
 	}
+	slices.SortFunc(slice, compare[T])
+
 	return slice
 }
 
 func (s Set[T]) MarshalJSON() ([]byte, error) {
-	if s == nil {
+	if len(s) == 0 {
 		return []byte("[]"), nil
 	}
-	var slice []T
-	for v := range s {
-		slice = append(slice, v)
-	}
-	return json.Marshal(slice)
+
+	return json.Marshal(s.TransformAsSlice())
 }
 
 func (s *Set[T]) UnmarshalJSON(b []byte) error {
@@ -102,6 +106,40 @@ func (s *Set[T]) UnmarshalJSON(b []byte) error {
 		s.Add(v)
 	}
 	return nil
+}
+
+// compare has similar semantics to cmp.Compare except that it works for
+// strings and structs. When comparing Go structs, it only checks the struct
+// fields of string type.
+// If the compared values aren't strings or structs, they are considered equal.
+func compare[T comparable](a, b T) int {
+	switch reflect.TypeOf(a).Kind() {
+	case reflect.String:
+		return cmp.Compare(
+			reflect.ValueOf(a).String(),
+			reflect.ValueOf(b).String(),
+		)
+	case reflect.Struct:
+		return cmp.Compare(
+			buildKey(reflect.ValueOf(a)),
+			buildKey(reflect.ValueOf(b)),
+		)
+	}
+
+	return 0
+}
+
+func buildKey(v reflect.Value) string {
+	var key strings.Builder
+	for i := 0; i < v.Type().NumField(); i++ {
+		v := v.Field(i)
+		if v.Type().Kind() != reflect.String {
+			continue
+		}
+		key.WriteString(v.String())
+	}
+
+	return key.String()
 }
 
 type RuleUsage struct {
