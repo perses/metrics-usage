@@ -25,6 +25,7 @@ import (
 	"github.com/perses/metrics-usage/source/metric"
 	"github.com/perses/metrics-usage/source/perses"
 	"github.com/perses/metrics-usage/source/rules"
+	"github.com/perses/metrics-usage/source/tsdb"
 	"github.com/sirupsen/logrus"
 )
 
@@ -68,6 +69,16 @@ func main() {
 				logrus.WithError(collectorErr).Fatalf("unable to create the labels collector number %d", i)
 			}
 			runner.WithTimerTasks(time.Duration(labelsCollectorConfig.Period), labelsCollector)
+		}
+	}
+
+	for i, tsdbCollectorConfig := range conf.TSDBCollectors {
+		if tsdbCollectorConfig.Enable {
+			tsdbCollector, collectorErr := tsdb.NewCollector(db, tsdbCollectorConfig)
+			if collectorErr != nil {
+				logrus.WithError(collectorErr).Fatalf("unable to create the TSDB collector number %d", i)
+			}
+			runner.WithTimerTasks(time.Duration(tsdbCollectorConfig.Period), tsdbCollector)
 		}
 	}
 

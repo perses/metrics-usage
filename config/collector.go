@@ -213,3 +213,31 @@ func (c *GrafanaCollector) Verify() error {
 	}
 	return nil
 }
+
+type TSDBCollector struct {
+	Enable     bool           `yaml:"enable"`
+	Period     model.Duration `yaml:"period,omitempty"`
+	Limit      int            `yaml:"limit,omitempty"`
+	HTTPClient HTTPClient     `yaml:"prometheus_client"`
+	PublicURL  *common.URL    `yaml:"public_url,omitempty"`
+}
+
+func (c *TSDBCollector) Verify() error {
+	if !c.Enable {
+		return nil
+	}
+
+	if c.Period <= 0 {
+		c.Period = model.Duration(defaultMetricCollectorPeriodDuration)
+	}
+
+	if c.Limit <= 0 {
+		c.Limit = 10
+	}
+
+	if c.HTTPClient.URL == nil {
+		return fmt.Errorf("missing Rest URL for the TSDB collector")
+	}
+
+	return nil
+}
