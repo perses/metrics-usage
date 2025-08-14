@@ -15,6 +15,7 @@ package v1
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,15 +39,33 @@ func TestJSONMarshalMetricUsage(t *testing.T) {
 			},
 			expectedJSON: `{"alertRules":[{"prom_link":"","group_name":"","name":"bar","expression":""},{"prom_link":"","group_name":"","name":"foo","expression":""}]}`,
 		},
+		{
+			name: "RecordingRules",
+			usage: &MetricUsage{
+				RecordingRules: NewSet(RuleUsage{Name: "foo"}, RuleUsage{Name: "bar"}),
+			},
+			expectedJSON: `{"recordingRules":[{"prom_link":"","group_name":"","name":"bar","expression":""},{"prom_link":"","group_name":"","name":"foo","expression":""}]}`,
+		},
+		{
+			name: "Dashboards",
+			usage: &MetricUsage{
+				Dashboards: NewSet(DashboardUsage{Name: "foo"}, DashboardUsage{Name: "bar"}),
+			},
+			expectedJSON: `{"dashboards":[{"uid":"","title":"bar","url":""},{"uid":"","title":"foo","url":""}]}`,
+		},
 	}
 	for _, test := range testSuite {
-		t.Run(test.name, func(t *testing.T) {
-			b, err := json.Marshal(test.usage)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			assert.Equal(t, test.expectedJSON, string(b))
-		})
+		// Run several times to ensure that the marshalled output is predictable.
+		for i := 0; i < 20; i++ {
+			t.Run(fmt.Sprintf("%s-%d", test.name, i), func(t *testing.T) {
+				t.Parallel()
+				b, err := json.Marshal(test.usage)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				assert.Equal(t, test.expectedJSON, string(b))
+			})
+		}
 	}
 }
 
