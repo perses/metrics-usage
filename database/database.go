@@ -71,7 +71,6 @@ func New(cfg config.Database) Database {
 }
 
 type db struct {
-	Database
 	// metrics is the list of metric name (as a key) associated with their usage based on the different collector activated.
 	// This struct is our "database".
 	metrics map[string]*v1.Metric
@@ -114,6 +113,8 @@ type db struct {
 	metricsMutex             sync.Mutex
 	partialMetricsUsageMutex sync.Mutex
 }
+
+var _ = Database(&db{})
 
 func (d *db) DeleteMetric(name string) bool {
 	d.metricsMutex.Lock()

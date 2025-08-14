@@ -51,7 +51,6 @@ func NewCollector(db database.Database, cfg *config.LabelsCollector) (async.Simp
 }
 
 type labelCollector struct {
-	async.SimpleTask
 	promClient        v1.API
 	db                database.Database
 	metricUsageClient client.Client
@@ -59,6 +58,8 @@ type labelCollector struct {
 	concurrency       int
 	logger            *logrus.Entry
 }
+
+var _ async.SimpleTask = &labelCollector{}
 
 func (c *labelCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	now := time.Now()

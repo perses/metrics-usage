@@ -71,12 +71,13 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.Simp
 }
 
 type grafanaCollector struct {
-	async.SimpleTask
 	metricUsageClient *usageclient.Client
 	grafanaURL        string
 	grafanaClient     *grafanaapi.GrafanaHTTPAPI
 	logger            *logrus.Entry
 }
+
+var _ async.SimpleTask = &grafanaCollector{}
 
 func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	hits, err := c.collectAllDashboardUID(ctx)
