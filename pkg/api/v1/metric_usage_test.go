@@ -56,7 +56,7 @@ func TestJSONMarshalMetricUsage(t *testing.T) {
 	}
 	for _, test := range testSuite {
 		// Run several times to ensure that the marshalled output is predictable.
-		for i := 0; i < 20; i++ {
+		for i := range 20 {
 			t.Run(fmt.Sprintf("%s-%d", test.name, i), func(t *testing.T) {
 				t.Parallel()
 				b, err := json.Marshal(test.usage)
