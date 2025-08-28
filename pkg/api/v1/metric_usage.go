@@ -16,6 +16,7 @@ package v1
 import (
 	"cmp"
 	"encoding/json"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -41,12 +42,8 @@ func MergeSet[T comparable](old, new Set[T]) Set[T] {
 		return new
 	}
 	s := Set[T]{}
-	for k, v := range new {
-		s[k] = v
-	}
-	for k, v := range old {
-		s[k] = v
-	}
+	maps.Copy(s, new)
+	maps.Copy(s, old)
 	return s
 }
 

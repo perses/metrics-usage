@@ -67,7 +67,7 @@ func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
 			return nil, getPasswordErr
 		}
 		return c.Client(ctx, &oauth2.Token{
-			AccessToken: base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", cfg.BasicAuth.Username, password))),
+			AccessToken: base64.StdEncoding.EncodeToString(fmt.Appendf(nil, "%s:%s", cfg.BasicAuth.Username, password)),
 			TokenType:   "basic",
 		}), nil
 	}

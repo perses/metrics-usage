@@ -35,10 +35,10 @@ type option struct {
 }
 
 type templateVar struct {
-	Name    string      `json:"name"`
-	Type    string      `json:"type"`
-	Query   interface{} `json:"query"`
-	Options []option    `json:"options"`
+	Name    string   `json:"name"`
+	Type    string   `json:"type"`
+	Query   any      `json:"query"`
+	Options []option `json:"options"`
 }
 
 // extractQueryFromVariableTemplating will extract the PromQL expression from query.
@@ -50,7 +50,7 @@ func (v templateVar) extractQueryFromVariableTemplating() (string, error) {
 	if query, ok := v.Query.(string); ok {
 		return query, nil
 	}
-	if queryObj, ok := v.Query.(map[string]interface{}); ok {
+	if queryObj, ok := v.Query.(map[string]any); ok {
 		if query, ok := queryObj["query"].(string); ok {
 			return query, nil
 		}
