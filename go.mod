@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/brunoga/deep v1.2.5
 	github.com/go-openapi/strfmt v0.23.0
-	github.com/grafana/grafana-openapi-client-go v0.0.0-20250617151817-c0f8cbb88d5c
+	github.com/grafana/grafana-openapi-client-go v0.0.0-20250828163705-969607f81baa
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.28.0

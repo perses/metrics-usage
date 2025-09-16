@@ -181,8 +181,8 @@ github.com/goreleaser/goreleaser/v2 v2.12.0 h1:UVy62eUC6UiSEoDl4HS2l53pFl1w37cBh
 github.com/goreleaser/goreleaser/v2 v2.12.0/go.mod h1:h04Jk7YH6U1gwVmVu/bl+GfbsTjITi4eTHVfapwcVPw=
 github.com/goreleaser/nfpm/v2 v2.43.1 h1:y7i+5wlAuBqUEsTL4cZp0FjnNStoA/to9Yuju+MqZpc=
 github.com/goreleaser/nfpm/v2 v2.43.1/go.mod h1:3sDxZIYoMCd3FPa44PuxWnhMtOUHEDBhsmddHAcfySw=
-github.com/grafana/grafana-openapi-client-go v0.0.0-20250617151817-c0f8cbb88d5c h1:jox7J0BnJmcZJp8lp631u4gjDEoIfpi6O3yrpiXNTtg=
-github.com/grafana/grafana-openapi-client-go v0.0.0-20250617151817-c0f8cbb88d5c/go.mod h1:AOzHLStinAJHJmcih1eEbIRImxpT6enYUsZLnnOvhbo=
+github.com/grafana/grafana-openapi-client-go v0.0.0-20250828163705-969607f81baa h1:tvPhlrPcD7/e+oWrIQeORR3lrI3bpyzmXM1/5+cs9Xg=
+github.com/grafana/grafana-openapi-client-go v0.0.0-20250828163705-969607f81baa/go.mod h1:kPvro06l0pxBDKftPQ9611gaoSNi6IJrcDgiXdN2Nng=
 github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc h1:GN2Lv3MGO7AS6PrRoT6yV5+wkrOpcszoIsO4+4ds248=
 github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc/go.mod h1:+JKpmjMGhpgPL+rXZ5nsZieVzvarn86asRlBg4uNGnk=
 github.com/huandu/xstrings v1.5.0 h1:2ag3IFq9ZDANvthTwTiqSSZLjDc+BedvHPAp5tJy2TI=
