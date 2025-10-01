@@ -10,7 +10,7 @@ require (
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.28.0
 	github.com/perses/perses v0.52.0
-	github.com/perses/plugins/prometheus v0.53.3
+	github.com/perses/plugins/prometheus v0.53.4
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.66.1
 	github.com/prometheus/prometheus v0.305.0
