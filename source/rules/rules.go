@@ -62,13 +62,14 @@ func NewCollector(db database.Database, cfg *config.RulesCollector) (async.Simpl
 }
 
 type rulesCollector struct {
-	async.SimpleTask
 	promClient        v1.API
 	metricUsageClient *usageclient.Client
 	promURL           string
 	logger            *logrus.Entry
 	retry             uint
 }
+
+var _ async.SimpleTask = &rulesCollector{}
 
 func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	result, err := c.getRules(ctx)

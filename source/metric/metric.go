@@ -40,12 +40,13 @@ func NewCollector(db database.Database, cfg config.MetricCollector) (async.Simpl
 }
 
 type metricCollector struct {
-	async.SimpleTask
 	client v1.API
 	db     database.Database
 	period model.Duration
 	logger *logrus.Entry
 }
+
+var _ async.SimpleTask = &metricCollector{}
 
 func (c *metricCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	now := time.Now()

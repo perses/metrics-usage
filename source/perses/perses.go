@@ -60,12 +60,13 @@ func NewCollector(db database.Database, cfg config.PersesCollector) (async.Simpl
 }
 
 type persesCollector struct {
-	async.SimpleTask
 	persesClient      persesClientV1.DashboardInterface
 	metricUsageClient *usageclient.Client
 	persesURL         string
 	logger            *logrus.Entry
 }
+
+var _ async.SimpleTask = &persesCollector{}
 
 func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error {
 	dashboards, err := c.persesClient.List("")
