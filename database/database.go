@@ -41,6 +41,7 @@ type Database interface {
 	EnqueuePartialMetricsUsage(usages map[string]*v1.MetricUsage)
 	EnqueueUsage(usages map[string]*v1.MetricUsage)
 	EnqueueLabels(labels map[string][]string)
+	EnqueueMetricStatistics(map[string]*v1.MetricStatistics)
 }
 
 func New(cfg config.Database) Database {
@@ -54,6 +55,7 @@ func New(cfg config.Database) Database {
 		partialMetricsUsageQueue: make(chan map[string]*v1.MetricUsage, 250),
 		labelsQueue:              make(chan map[string][]string, 250),
 		metricsQueue:             make(chan []string, 10),
+		metricStatisticsQueue:    make(chan map[string]*v1.MetricStatistics, 250),
 		path:                     cfg.Path,
 	}
 
@@ -61,6 +63,7 @@ func New(cfg config.Database) Database {
 	go d.watchMetricsQueue()
 	go d.watchPartialMetricsUsageQueue()
 	go d.watchLabelsQueue()
+	go d.watchMetricStatisticsQueue()
 	if !*cfg.InMemory {
 		if err := d.readMetricsInJSONFile(); err != nil {
 			logrus.WithError(err).Warning("failed to read metrics file")
@@ -88,6 +91,9 @@ type db struct {
 	// metricsQueue is the channel that should be used to send and receive the list of metric name to keep in memory.
 	// Based on this list, we will then collect their usage.
 	metricsQueue chan []string
+	// metricStatisticsQueue is the channel that should be used to send and receive the list of metric statistics to keep in memory.
+	// Based on this list, we will then collect their usage.
+	metricStatisticsQueue chan map[string]*v1.MetricStatistics
 	// labelsQueue is the way to send the labels per metric to write in the database.
 	// There will be no other way to write in it.
 	// Doing that allows us to accept more HTTP requests to write data and to delay the actual writing.
@@ -146,6 +152,10 @@ func (d *db) ListPartialMetrics() (map[string]*v1.PartialMetric, error) {
 
 func (d *db) EnqueueMetricList(metrics []string) {
 	d.metricsQueue <- metrics
+}
+
+func (d *db) EnqueueMetricStatistics(stats map[string]*v1.MetricStatistics) {
+	d.metricStatisticsQueue <- stats
 }
 
 func (d *db) ListPendingUsage() map[string]*v1.MetricUsage {
@@ -207,6 +217,25 @@ func (d *db) watchMetricsQueue() {
 			d.deleteMetric(metricName)
 		}
 		d.metricsMutex.Unlock()
+	}
+}
+
+// watchMetricStatisticsQueue is the way to store the metric statistics in the database.
+func (d *db) watchMetricStatisticsQueue() {
+	for stats := range d.metricStatisticsQueue {
+		for metricName := range stats {
+			d.metricsMutex.Lock()
+			if _, ok := d.metrics[metricName]; !ok {
+				logrus.Debugf("metric_name %q is used but it's not found by the metric collector", metricName)
+				// Since the metric_name is not known yet, we need to buffer it.
+				// In a later stage, if the metric is received/known,
+				// we will then use this buffer to populate the usage of the metric.
+				d.metrics[metricName] = &v1.Metric{}
+			}
+
+			d.metrics[metricName].Statistics = stats[metricName]
+			d.metricsMutex.Unlock()
+		}
 	}
 }
 
