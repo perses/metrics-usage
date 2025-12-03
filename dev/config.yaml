@@ -17,3 +17,6 @@ perses_collector:
   enable: true
   perses_client:
     url: "https://demo.perses.dev"
+
+query_parser:
+  engine: promql

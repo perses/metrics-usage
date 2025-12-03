@@ -51,6 +51,7 @@ Generic placeholders are defined as follows:
   - <Rule_Collector config> ]
 [ perses_collector: <Perses_Collector config> ]
 [ grafana_collector: <Grafana_Collector config> ]
+[ query_parser: <Query_Parser config> ]
 ```
 
 ### Database Config
@@ -191,4 +192,24 @@ client_secret: <string>
 
 # TokenURL is the resource server's token endpoint URL. This is a constant specific to each server.
 token_url: <string>
+```
+
+### Query_Parser Config
+
+```yaml
+# Engine specifies the query parser engine to use for analyzing PromQL/MetricsQL expressions.
+# Valid values are: "promql" (default) or "metricsql"
+# This can be overridden via environment variable METRICS_USAGE_QUERY_PARSER_ENGINE
+[ engine: <string> | default = "promql" ]
+```
+
+The query parser engine determines how metric names are extracted from query expressions:
+- `promql`: Uses the Prometheus PromQL parser (default, backward compatible)
+- `metricsql`: Uses the VictoriaMetrics MetricsQL parser, which supports PromQL plus additional MetricsQL extensions
+
+Example:
+
+```yaml
+query_parser:
+  engine: metricsql
 ```

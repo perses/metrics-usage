@@ -20,6 +20,7 @@ import (
 	"github.com/perses/common/app"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/perses/metrics-usage/source/grafana"
 	"github.com/perses/metrics-usage/source/labels"
 	"github.com/perses/metrics-usage/source/metric"
@@ -38,6 +39,12 @@ func main() {
 	if err != nil {
 		logrus.WithError(err).Fatalf("error reading configuration from file %q or from environment", *configFile)
 	}
+
+	// Initialize the query parser engine
+	if err := expr.SetEngine(conf.QueryParser.Engine); err != nil {
+		logrus.WithError(err).Fatalf("failed to set query parser engine")
+	}
+	logrus.Infof("Using query parser engine: %s", conf.QueryParser.Engine)
 
 	db := database.New(conf.Database)
 	runner := app.NewRunner().WithDefaultHTTPServer("metrics_usage")

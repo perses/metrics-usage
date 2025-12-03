@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/perses/common/config"
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/prometheus/common/model"
 )
 
@@ -54,6 +55,20 @@ func (d *Database) Verify() error {
 	return nil
 }
 
+type QueryParser struct {
+	Engine string `yaml:"engine,omitempty"`
+}
+
+func (q *QueryParser) Verify() error {
+	if q.Engine == "" {
+		q.Engine = expr.EnginePromQL
+	}
+	if q.Engine != expr.EnginePromQL && q.Engine != expr.EngineMetricsQL {
+		return fmt.Errorf("invalid query parser engine %q, must be %q or %q", q.Engine, expr.EnginePromQL, expr.EngineMetricsQL)
+	}
+	return nil
+}
+
 type Config struct {
 	Database         Database           `yaml:"database"`
 	MetricCollector  MetricCollector    `yaml:"metric_collector,omitempty"`
@@ -61,6 +76,7 @@ type Config struct {
 	LabelsCollectors []*LabelsCollector `yaml:"labels_collectors,omitempty"`
 	PersesCollector  PersesCollector    `yaml:"perses_collector,omitempty"`
 	GrafanaCollector GrafanaCollector   `yaml:"grafana_collector,omitempty"`
+	QueryParser      QueryParser        `yaml:"query_parser,omitempty"`
 }
 
 func Resolve(configFile string) (Config, error) {

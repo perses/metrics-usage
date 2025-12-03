@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/perses/metrics-usage/pkg/analyze/parser"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
@@ -172,7 +173,7 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 				continue
 			}
 			exprWithVariableReplaced := replaceVariables(t.Expr, staticVariables)
-			metrics, partialMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
+			metrics, partialMetrics, err := expr.Analyze(exprWithVariableReplaced)
 			if err != nil {
 				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 				if len(otherMetrics) > 0 {
@@ -239,7 +240,7 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 			continue
 		}
 		exprWithVariableReplaced := replaceVariables(query, staticVariables)
-		metrics, partialMetrics, err := prometheus.AnalyzePromQLExpression(exprWithVariableReplaced)
+		metrics, partialMetrics, err := expr.Analyze(exprWithVariableReplaced)
 		if err != nil {
 			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 			if len(otherMetrics) > 0 {

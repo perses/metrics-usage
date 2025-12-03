@@ -17,10 +17,9 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
-	"github.com/prometheus/prometheus/model/labels"
-	"github.com/prometheus/prometheus/promql/parser"
 )
 
 var validMetricName = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
@@ -102,38 +101,9 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 
 // AnalyzePromQLExpression is returning a list of valid metric names extracted from the PromQL expression.
 // It also returned a list of partial metric names that likely look like a regexp.
+// This function is kept for backward compatibility and delegates to the configured expression analyzer.
 func AnalyzePromQLExpression(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
-	expr, err := parser.ParseExpr(query)
-	if err != nil {
-		return nil, nil, err
-	}
-	metricNames := modelAPIV1.Set[string]{}
-	partialMetricNames := modelAPIV1.Set[string]{}
-	parser.Inspect(expr, func(node parser.Node, _ []parser.Node) error {
-		if n, ok := node.(*parser.VectorSelector); ok {
-			// The metric name is only present when the node is a VectorSelector.
-			// Then if the vector has the for metric_name{labelName="labelValue"}, then .Name is set.
-			// Otherwise, we need to look at the labelName __name__ to find it.
-			// Note: we will need to change this rule with Prometheus 3.0
-			if n.Name != "" {
-				metricNames.Add(n.Name)
-				return nil
-			}
-			for _, m := range n.LabelMatchers {
-				if m.Name == labels.MetricName {
-					if IsValidMetricName(m.Value) {
-						metricNames.Add(m.Value)
-					} else {
-						partialMetricNames.Add(m.Value)
-					}
-
-					return nil
-				}
-			}
-		}
-		return nil
-	})
-	return metricNames, partialMetricNames, nil
+	return expr.Analyze(query)
 }
 
 func IsValidMetricName(name string) bool {

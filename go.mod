@@ -3,6 +3,7 @@ module github.com/perses/metrics-usage
 go 1.25.1
 
 require (
+	github.com/VictoriaMetrics/metricsql v0.84.8
 	github.com/brunoga/deep v1.2.5
 	github.com/go-openapi/strfmt v0.25.0
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20250828163705-969607f81baa
@@ -27,6 +28,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
+	github.com/VictoriaMetrics/metrics v1.35.3 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
@@ -103,7 +105,9 @@ require (
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fastrand v1.1.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
+	github.com/valyala/histogram v1.2.0 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
