@@ -12,7 +12,7 @@ require (
 	github.com/perses/perses v0.53.0-beta.2
 	github.com/perses/plugins/prometheus v0.56.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/common v0.67.1
+	github.com/prometheus/common v0.67.4
 	github.com/prometheus/prometheus v0.307.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
@@ -61,6 +61,7 @@ require (
 	github.com/go-openapi/validate v0.24.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/goreleaser/chglog v0.7.3 // indirect
@@ -119,7 +120,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
-	golang.org/x/net v0.45.0 // indirect
+	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
