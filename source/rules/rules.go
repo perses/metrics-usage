@@ -20,6 +20,7 @@ import (
 	"github.com/perses/common/async"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	"github.com/perses/metrics-usage/pkg/client"
 	"github.com/perses/metrics-usage/usageclient"
@@ -30,7 +31,7 @@ import (
 
 const defaultRetryInterval = 10 * time.Second
 
-func NewCollector(db database.Database, cfg *config.RulesCollector) (async.SimpleTask, error) {
+func NewCollector(db database.Database, cfg *config.RulesCollector, analyzer expr.Analyzer) (async.SimpleTask, error) {
 	promClient, err := promUtils.NewClient(cfg.HTTPClient)
 	if err != nil {
 		return nil, err
@@ -51,6 +52,7 @@ func NewCollector(db database.Database, cfg *config.RulesCollector) (async.Simpl
 	return &rulesCollector{
 		promURL:    url.String(),
 		promClient: promClient,
+		analyzer:   analyzer,
 		metricUsageClient: &usageclient.Client{
 			DB:                db,
 			MetricUsageClient: metricUsageClient,
@@ -67,6 +69,7 @@ type rulesCollector struct {
 	promURL           string
 	logger            *logrus.Entry
 	retry             uint
+	analyzer          expr.Analyzer
 }
 
 var _ async.SimpleTask = &rulesCollector{}
@@ -77,7 +80,7 @@ func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 		c.logger.WithError(err).Error("Failed to get rules")
 		return nil
 	}
-	metricsUsage, partialMetricsUsage, errs := prometheus.Analyze(result.Groups, c.promURL)
+	metricsUsage, partialMetricsUsage, errs := prometheus.Analyze(result.Groups, c.promURL, c.analyzer)
 	for _, logErr := range errs {
 		logErr.Log(c.logger)
 	}

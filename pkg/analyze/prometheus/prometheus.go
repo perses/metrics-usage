@@ -24,7 +24,7 @@ import (
 
 var validMetricName = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 
-func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.MetricUsage, map[string]*modelAPIV1.MetricUsage, []*modelAPIV1.LogError) {
+func Analyze(ruleGroups []v1.RuleGroup, source string, analyzer expr.Analyzer) (map[string]*modelAPIV1.MetricUsage, map[string]*modelAPIV1.MetricUsage, []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	partialMetricUsage := make(map[string]*modelAPIV1.MetricUsage)
@@ -32,7 +32,7 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 		for _, rule := range ruleGroup.Rules {
 			switch v := rule.(type) {
 			case v1.RecordingRule:
-				metricNames, partialMetrics, parserErr := AnalyzePromQLExpression(v.Query)
+				metricNames, partialMetrics, parserErr := AnalyzePromQLExpression(v.Query, analyzer)
 				if parserErr != nil {
 					errs = append(errs, &modelAPIV1.LogError{
 						Message: fmt.Sprintf("Failed to extract metric name for the ruleGroup %q and the recordingRule %q", ruleGroup.Name, v.Name),
@@ -61,7 +61,7 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 					false,
 				)
 			case v1.AlertingRule:
-				metricNames, partialMetrics, parserErr := AnalyzePromQLExpression(v.Query)
+				metricNames, partialMetrics, parserErr := AnalyzePromQLExpression(v.Query, analyzer)
 				if parserErr != nil {
 					errs = append(errs, &modelAPIV1.LogError{
 						Message: fmt.Sprintf("Failed to extract metric name for the ruleGroup %q and the alertingRule %q", ruleGroup.Name, v.Name),
@@ -101,9 +101,12 @@ func Analyze(ruleGroups []v1.RuleGroup, source string) (map[string]*modelAPIV1.M
 
 // AnalyzePromQLExpression is returning a list of valid metric names extracted from the PromQL expression.
 // It also returned a list of partial metric names that likely look like a regexp.
-// This function is kept for backward compatibility and delegates to the configured expression analyzer.
-func AnalyzePromQLExpression(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
-	return expr.Analyze(query)
+// This function is kept for backward compatibility and delegates to the provided expression analyzer.
+func AnalyzePromQLExpression(query string, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
+	if analyzer == nil {
+		return nil, nil, fmt.Errorf("expression analyzer is not configured")
+	}
+	return analyzer.Analyze(query)
 }
 
 func IsValidMetricName(name string) bool {

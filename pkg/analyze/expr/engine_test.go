@@ -17,7 +17,7 @@ import (
 	"testing"
 )
 
-func TestSetEngine(t *testing.T) {
+func TestNewAnalyzer(t *testing.T) {
 	tests := []struct {
 		name    string
 		engine  string
@@ -42,18 +42,18 @@ func TestSetEngine(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := SetEngine(tt.engine)
+			_, err := NewAnalyzer(tt.engine)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("SetEngine() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewAnalyzer() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
 func TestAnalyze_PromQL(t *testing.T) {
-	err := SetEngine(EnginePromQL)
+	analyzer, err := NewAnalyzer(EnginePromQL)
 	if err != nil {
-		t.Fatalf("SetEngine() error = %v", err)
+		t.Fatalf("NewAnalyzer() error = %v", err)
 	}
 
 	tests := []struct {
@@ -102,7 +102,7 @@ func TestAnalyze_PromQL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metrics, partial, err := Analyze(tt.query)
+			metrics, partial, err := analyzer.Analyze(tt.query)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Analyze() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -135,9 +135,9 @@ func TestAnalyze_PromQL(t *testing.T) {
 }
 
 func TestAnalyze_MetricsQL(t *testing.T) {
-	err := SetEngine("metricsql")
+	analyzer, err := NewAnalyzer(EngineMetricsQL)
 	if err != nil {
-		t.Fatalf("SetEngine() error = %v", err)
+		t.Fatalf("NewAnalyzer() error = %v", err)
 	}
 
 	tests := []struct {
@@ -186,7 +186,7 @@ func TestAnalyze_MetricsQL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metrics, partial, err := Analyze(tt.query)
+			metrics, partial, err := analyzer.Analyze(tt.query)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Analyze() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -216,22 +216,4 @@ func TestAnalyze_MetricsQL(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestAnalyze_DefaultEngine(t *testing.T) {
-	// Reset to nil to test default behavior
-	currentAnalyzer = nil
-
-	metrics, _, err := Analyze(`http_requests_total{job="api"}`)
-	if err != nil {
-		t.Fatalf("Analyze() error = %v", err)
-	}
-
-	// Should default to promql and work
-	if !metrics.Contains("http_requests_total") {
-		t.Errorf("Analyze() missing metric with default engine")
-	}
-
-	// Set back to promql for other tests
-	_ = SetEngine(EnginePromQL)
 }

@@ -41,15 +41,20 @@ var variableReplacer = strings.NewReplacer(
 	"$__project", "perses",
 )
 
-func Analyze(dashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
-	m1, inv1, err1 := extractMetricUsageFromVariables(dashboard.Spec.Variables, dashboard)
-	m2, inv2, err2 := extractMetricUsageFromPanels(dashboard.Spec.Panels, dashboard)
+func Analyze(dashboard *v1.Dashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+	if analyzer == nil {
+		return nil, nil, []*modelAPIV1.LogError{
+			{Error: fmt.Errorf("expression analyzer is not configured")},
+		}
+	}
+	m1, inv1, err1 := extractMetricUsageFromVariables(dashboard.Spec.Variables, dashboard, analyzer)
+	m2, inv2, err2 := extractMetricUsageFromPanels(dashboard.Spec.Panels, dashboard, analyzer)
 	m1.Merge(m2)
 	inv1.Merge(inv2)
 	return m1, inv1, append(err1, err2...)
 }
 
-func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
 	partialMetricsResult := modelAPIV1.Set[string]{}
@@ -71,7 +76,7 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 				continue
 			}
 			exprWithVariableReplaced := replaceVariables(spec.Query)
-			metrics, partialMetrics, err := expr.Analyze(exprWithVariableReplaced)
+			metrics, partialMetrics, err := analyzer.Analyze(exprWithVariableReplaced)
 			if err != nil {
 				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 				if len(otherMetrics) > 0 {
@@ -97,7 +102,7 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 	return result, partialMetricsResult, errs
 }
 
-func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
 	partialMetricsResult := modelAPIV1.Set[string]{}
@@ -125,7 +130,7 @@ func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDash
 			continue
 		}
 		exprWithVariableReplaced := replaceVariables(spec.Expr)
-		metrics, partialMetrics, err := expr.Analyze(exprWithVariableReplaced)
+		metrics, partialMetrics, err := analyzer.Analyze(exprWithVariableReplaced)
 		if err != nil {
 			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 			if len(otherMetrics) > 0 {

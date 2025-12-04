@@ -24,35 +24,19 @@ type Analyzer interface {
 	Analyze(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error)
 }
 
-var (
-	currentAnalyzer Analyzer
-)
-
 const (
 	EnginePromQL    = "promql"
 	EngineMetricsQL = "metricsql"
 )
 
-// SetEngine sets the active analyzer engine
-func SetEngine(engine string) error {
+// NewAnalyzer returns a fresh analyzer implementation for the requested engine.
+func NewAnalyzer(engine string) (Analyzer, error) {
 	switch engine {
 	case EnginePromQL:
-		currentAnalyzer = &promqlAnalyzer{}
+		return &promqlAnalyzer{}, nil
 	case EngineMetricsQL:
-		currentAnalyzer = &metricsqlAnalyzer{}
+		return &metricsqlAnalyzer{}, nil
 	default:
-		return fmt.Errorf("unknown engine %q, must be %q or %q", engine, EnginePromQL, EngineMetricsQL)
+		return nil, fmt.Errorf("unknown engine %q, must be %q or %q", engine, EnginePromQL, EngineMetricsQL)
 	}
-	return nil
-}
-
-// Analyze parses the query expression and extracts metric names using the active analyzer
-func Analyze(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
-	analyzer := currentAnalyzer
-	if analyzer == nil {
-		// Default to promql if not set
-		analyzer = &promqlAnalyzer{}
-	}
-
-	return analyzer.Analyze(query)
 }

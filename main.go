@@ -41,8 +41,9 @@ func main() {
 	}
 
 	// Initialize the query parser engine
-	if err := expr.SetEngine(conf.QueryParser.Engine); err != nil {
-		logrus.WithError(err).Fatalf("failed to set query parser engine")
+	queryAnalyzer, err := expr.NewAnalyzer(conf.QueryParser.Engine)
+	if err != nil {
+		logrus.WithError(err).Fatalf("failed to initialize query parser engine")
 	}
 	logrus.Infof("Using query parser engine: %s", conf.QueryParser.Engine)
 
@@ -60,7 +61,7 @@ func main() {
 
 	for i, rulesCollectorConfig := range conf.RulesCollectors {
 		if rulesCollectorConfig.Enable {
-			rulesCollector, collectorErr := rules.NewCollector(db, rulesCollectorConfig)
+			rulesCollector, collectorErr := rules.NewCollector(db, rulesCollectorConfig, queryAnalyzer)
 			if collectorErr != nil {
 				logrus.WithError(collectorErr).Fatalf("unable to create the rules collector number %d", i)
 			}
@@ -80,7 +81,7 @@ func main() {
 
 	if conf.PersesCollector.Enable {
 		persesCollectorConfig := conf.PersesCollector
-		persesCollector, collectorErr := perses.NewCollector(db, persesCollectorConfig)
+		persesCollector, collectorErr := perses.NewCollector(db, persesCollectorConfig, queryAnalyzer)
 		if collectorErr != nil {
 			logrus.WithError(collectorErr).Fatal("unable to create the perses collector")
 		}
@@ -89,7 +90,7 @@ func main() {
 
 	if conf.GrafanaCollector.Enable {
 		grafanaCollectorConfig := conf.GrafanaCollector
-		grafanaCollector, collectorErr := grafana.NewCollector(db, grafanaCollectorConfig)
+		grafanaCollector, collectorErr := grafana.NewCollector(db, grafanaCollectorConfig, queryAnalyzer)
 		if collectorErr != nil {
 			logrus.WithError(collectorErr).Fatal("unable to create the grafana collector")
 		}
@@ -99,7 +100,7 @@ func main() {
 	runner.HTTPServerBuilder().
 		ActivatePprof(*pprof).
 		APIRegistration(metric.NewAPI(db)).
-		APIRegistration(rules.NewAPI(db)).
+		APIRegistration(rules.NewAPI(db, queryAnalyzer)).
 		APIRegistration(labels.NewAPI(db))
 	runner.Start()
 }

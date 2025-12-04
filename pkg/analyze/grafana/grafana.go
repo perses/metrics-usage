@@ -147,23 +147,28 @@ var (
 	variableReplacer = strings.NewReplacer(generateGrafanaTupleVariableSyntaxReplacer(globalVariableList)...)
 )
 
-func Analyze(dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func Analyze(dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+	if analyzer == nil {
+		return nil, nil, []*modelAPIV1.LogError{
+			{Error: fmt.Errorf("expression analyzer is not configured")},
+		}
+	}
 	staticVariables := strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(extractStaticVariables(dashboard.Templating.List))...)
 	allVariableNames := collectAllVariableName(dashboard.Templating.List)
-	m1, inv1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, allVariableNames, dashboard)
+	m1, inv1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, allVariableNames, dashboard, analyzer)
 	for _, r := range dashboard.Rows {
-		m2, inv2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, allVariableNames, dashboard)
+		m2, inv2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, allVariableNames, dashboard, analyzer)
 		m1.Merge(m2)
 		inv1.Merge(inv2)
 		err1 = append(err1, err2...)
 	}
-	m3, inv3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, allVariableNames, dashboard)
+	m3, inv3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, allVariableNames, dashboard, analyzer)
 	m1.Merge(m3)
 	inv1.Merge(inv3)
 	return m1, inv1, append(err1, err3...)
 }
 
-func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
 	partialMetricsResult := modelAPIV1.Set[string]{}
@@ -173,7 +178,7 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 				continue
 			}
 			exprWithVariableReplaced := replaceVariables(t.Expr, staticVariables)
-			metrics, partialMetrics, err := expr.Analyze(exprWithVariableReplaced)
+			metrics, partialMetrics, err := analyzer.Analyze(exprWithVariableReplaced)
 			if err != nil {
 				otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 				if len(otherMetrics) > 0 {
@@ -199,7 +204,7 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 	return result, partialMetricsResult, errs
 }
 
-func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
 	partialMetricsResult := modelAPIV1.Set[string]{}
@@ -240,7 +245,7 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 			continue
 		}
 		exprWithVariableReplaced := replaceVariables(query, staticVariables)
-		metrics, partialMetrics, err := expr.Analyze(exprWithVariableReplaced)
+		metrics, partialMetrics, err := analyzer.Analyze(exprWithVariableReplaced)
 		if err != nil {
 			otherMetrics := parser.ExtractMetricNameWithVariable(exprWithVariableReplaced)
 			if len(otherMetrics) > 0 {

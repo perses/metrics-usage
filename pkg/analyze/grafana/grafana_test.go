@@ -19,6 +19,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/stretchr/testify/assert"
 )
@@ -33,6 +34,10 @@ func unmarshalDashboard(path string) (*SimplifiedDashboard, error) {
 }
 
 func TestAnalyze(t *testing.T) {
+	analyzer, err := expr.NewAnalyzer(expr.EnginePromQL)
+	if err != nil {
+		t.Fatalf("failed to initialize analyzer: %v", err)
+	}
 	tests := []struct {
 		name           string
 		dashboardFile  string
@@ -121,7 +126,7 @@ func TestAnalyze(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			metrics, partialMetrics, errs := Analyze(dashboard)
+			metrics, partialMetrics, errs := Analyze(dashboard, analyzer)
 			metricsAsSlice := metrics.TransformAsSlice()
 			invalidMetricsAsSlice := partialMetrics.TransformAsSlice()
 			slices.Sort(metricsAsSlice)

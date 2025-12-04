@@ -20,6 +20,7 @@ import (
 	"github.com/perses/common/async"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/perses/metrics-usage/pkg/analyze/perses"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/pkg/client"
@@ -30,7 +31,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewCollector(db database.Database, cfg config.PersesCollector) (async.SimpleTask, error) {
+func NewCollector(db database.Database, cfg config.PersesCollector, analyzer expr.Analyzer) (async.SimpleTask, error) {
 	restClient, err := persesClientConfig.NewRESTClient(cfg.HTTPClient)
 	if err != nil {
 		return nil, err
@@ -55,7 +56,8 @@ func NewCollector(db database.Database, cfg config.PersesCollector) (async.Simpl
 			MetricUsageClient: metricUsageClient,
 			Logger:            logger,
 		},
-		logger: logger,
+		logger:   logger,
+		analyzer: analyzer,
 	}, nil
 }
 
@@ -64,6 +66,7 @@ type persesCollector struct {
 	metricUsageClient *usageclient.Client
 	persesURL         string
 	logger            *logrus.Entry
+	analyzer          expr.Analyzer
 }
 
 var _ async.SimpleTask = &persesCollector{}
@@ -76,7 +79,7 @@ func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error
 	}
 
 	for _, dash := range dashboards {
-		metrics, partialMetrics, errs := perses.Analyze(dash)
+		metrics, partialMetrics, errs := perses.Analyze(dash, c.analyzer)
 		for _, logErr := range errs {
 			logErr.Log(c.logger)
 		}
