@@ -25,6 +25,7 @@ import (
 	"github.com/perses/common/async"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/perses/metrics-usage/pkg/analyze/grafana"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/metrics-usage/pkg/client"
@@ -32,7 +33,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.SimpleTask, error) {
+func NewCollector(db database.Database, cfg config.GrafanaCollector, analyzer expr.Analyzer) (async.SimpleTask, error) {
 	httpClient, err := config.NewHTTPClient(cfg.HTTPClient)
 	if err != nil {
 		return nil, err
@@ -66,7 +67,8 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector) (async.Simp
 			MetricUsageClient: metricUsageClient,
 			Logger:            logger,
 		},
-		logger: logrus.StandardLogger().WithField("collector", "grafana"),
+		logger:   logrus.StandardLogger().WithField("collector", "grafana"),
+		analyzer: analyzer,
 	}, nil
 }
 
@@ -75,6 +77,7 @@ type grafanaCollector struct {
 	grafanaURL        string
 	grafanaClient     *grafanaapi.GrafanaHTTPAPI
 	logger            *logrus.Entry
+	analyzer          expr.Analyzer
 }
 
 var _ async.SimpleTask = &grafanaCollector{}
@@ -94,7 +97,7 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 			continue
 		}
 		c.logger.Debugf("extracting metrics for the dashboard %s with UID %q", h.Title, h.UID)
-		metrics, partialMetrics, errs := grafana.Analyze(dashboard)
+		metrics, partialMetrics, errs := grafana.Analyze(dashboard, c.analyzer)
 		for _, logErr := range errs {
 			logErr.Log(c.logger)
 		}

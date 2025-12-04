@@ -20,6 +20,7 @@ import (
 	"github.com/perses/common/app"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
+	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/perses/metrics-usage/source/grafana"
 	"github.com/perses/metrics-usage/source/labels"
 	"github.com/perses/metrics-usage/source/metric"
@@ -39,6 +40,13 @@ func main() {
 		logrus.WithError(err).Fatalf("error reading configuration from file %q or from environment", *configFile)
 	}
 
+	// Initialize the query parser engine
+	queryAnalyzer, err := expr.NewAnalyzer(conf.QueryParser.Engine)
+	if err != nil {
+		logrus.WithError(err).Fatalf("failed to initialize query parser engine")
+	}
+	logrus.Infof("Using query parser engine: %s", conf.QueryParser.Engine)
+
 	db := database.New(conf.Database)
 	runner := app.NewRunner().WithDefaultHTTPServer("metrics_usage")
 
@@ -53,7 +61,7 @@ func main() {
 
 	for i, rulesCollectorConfig := range conf.RulesCollectors {
 		if rulesCollectorConfig.Enable {
-			rulesCollector, collectorErr := rules.NewCollector(db, rulesCollectorConfig)
+			rulesCollector, collectorErr := rules.NewCollector(db, rulesCollectorConfig, queryAnalyzer)
 			if collectorErr != nil {
 				logrus.WithError(collectorErr).Fatalf("unable to create the rules collector number %d", i)
 			}
@@ -73,7 +81,7 @@ func main() {
 
 	if conf.PersesCollector.Enable {
 		persesCollectorConfig := conf.PersesCollector
-		persesCollector, collectorErr := perses.NewCollector(db, persesCollectorConfig)
+		persesCollector, collectorErr := perses.NewCollector(db, persesCollectorConfig, queryAnalyzer)
 		if collectorErr != nil {
 			logrus.WithError(collectorErr).Fatal("unable to create the perses collector")
 		}
@@ -82,7 +90,7 @@ func main() {
 
 	if conf.GrafanaCollector.Enable {
 		grafanaCollectorConfig := conf.GrafanaCollector
-		grafanaCollector, collectorErr := grafana.NewCollector(db, grafanaCollectorConfig)
+		grafanaCollector, collectorErr := grafana.NewCollector(db, grafanaCollectorConfig, queryAnalyzer)
 		if collectorErr != nil {
 			logrus.WithError(collectorErr).Fatal("unable to create the grafana collector")
 		}
@@ -92,7 +100,7 @@ func main() {
 	runner.HTTPServerBuilder().
 		ActivatePprof(*pprof).
 		APIRegistration(metric.NewAPI(db)).
-		APIRegistration(rules.NewAPI(db)).
+		APIRegistration(rules.NewAPI(db, queryAnalyzer)).
 		APIRegistration(labels.NewAPI(db))
 	runner.Start()
 }
