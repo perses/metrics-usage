@@ -1,5 +1,4 @@
-Configuration
-=============
+# Configuration
 
 Metrics-usage is configured via command-line flags and a configuration file
 
@@ -36,13 +35,13 @@ The file is written in YAML format, defined by the scheme described below. Brack
 
 Generic placeholders are defined as follows:
 
-* `<boolean>`: a boolean that can take the values `true` or `false`
-* `<duration>`: a duration matching the regular expression `((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)`, e.g. `1d`, `1h30m`, `5m`, `10s`
-* `<filename>`: a valid path in the current working directory
-* `<path>`: a valid URL path
-* `<int>`: an integer value
-* `<secret>`: a regular string that is a secret, such as a password
-* `<string>`: a regular string
+- `<boolean>`: a boolean that can take the values `true` or `false`
+- `<duration>`: a duration matching the regular expression `((([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?|0)`, e.g. `1d`, `1h30m`, `5m`, `10s`
+- `<filename>`: a valid path in the current working directory
+- `<path>`: a valid URL path
+- `<int>`: an integer value
+- `<secret>`: a regular string that is a secret, such as a password
+- `<string>`: a regular string
 
 ```yaml
 [ database: <Database Config> ]
@@ -128,6 +127,32 @@ perses_client: <HTTPClient config>
 
 # the Grafana client used to retrieve the dashboards
 grafana_client: < HTTPClient config>
+
+# List of datasource types to ignore when extracting metric expressions from dashboard targets.
+# Targets with matching datasource types will be skipped during metric extraction.
+# Datasource type matching is case-insensitive (e.g., "postgres" matches "POSTGRES").
+# Example: ["postgres", "mysql", "influxdb"]
+[ ignore_datasource_types: <list of strings> ]
+
+# List of datasource UIDs to ignore when extracting metric expressions from dashboard targets.
+# Targets with matching datasource UIDs will be skipped during metric extraction.
+# Example: ["bf5b9901-8a28-4501-a0c2-726b4ee3f15d", "another-uid"]
+[ ignore_datasource_uids: <list of strings> ]
+```
+
+Example configuration:
+
+```yaml
+grafana_collector:
+  enable: true
+  period: "12h"
+  grafana_client:
+    url: "https://grafana.example.com"
+  ignore_datasource_types:
+    - postgres
+    - mysql
+  ignore_datasource_uids:
+    - bf5b9901-8a28-4501-a0c2-726b4ee3f15d
 ```
 
 ### TLS Config
@@ -200,10 +225,11 @@ token_url: <string>
 # Engine specifies the query parser engine to use for analyzing PromQL/MetricsQL expressions.
 # Valid values are: "promql" (default) or "metricsql"
 # This can be overridden via environment variable METRICS_USAGE_QUERY_PARSER_ENGINE
-[ engine: <string> | default = "promql" ]
+[engine: <string> | default = "promql"]
 ```
 
 The query parser engine determines how metric names are extracted from query expressions:
+
 - `promql`: Uses the Prometheus PromQL parser (default, backward compatible)
 - `metricsql`: Uses the VictoriaMetrics MetricsQL parser, which supports PromQL plus additional MetricsQL extensions
 

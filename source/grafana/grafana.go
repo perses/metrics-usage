@@ -59,6 +59,14 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector, analyzer ex
 	if cfg.PublicURL != nil {
 		url = cfg.PublicURL.URL
 	}
+	// Build datasource filter from config
+	var datasourceFilter *grafana.DatasourceFilter
+	if len(cfg.IgnoreDatasourceTypes) > 0 || len(cfg.IgnoreDatasourceUIDs) > 0 {
+		datasourceFilter = &grafana.DatasourceFilter{
+			IgnoreTypes: modelAPIV1.NewSet(cfg.IgnoreDatasourceTypes...),
+			IgnoreUIDs:  modelAPIV1.NewSet(cfg.IgnoreDatasourceUIDs...),
+		}
+	}
 	return &grafanaCollector{
 		grafanaURL:    url.String(),
 		grafanaClient: grafanaClient,
@@ -67,8 +75,9 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector, analyzer ex
 			MetricUsageClient: metricUsageClient,
 			Logger:            logger,
 		},
-		logger:   logrus.StandardLogger().WithField("collector", "grafana"),
-		analyzer: analyzer,
+		logger:           logrus.StandardLogger().WithField("collector", "grafana"),
+		analyzer:         analyzer,
+		datasourceFilter: datasourceFilter,
 	}, nil
 }
 
@@ -78,6 +87,7 @@ type grafanaCollector struct {
 	grafanaClient     *grafanaapi.GrafanaHTTPAPI
 	logger            *logrus.Entry
 	analyzer          expr.Analyzer
+	datasourceFilter  *grafana.DatasourceFilter
 }
 
 var _ async.SimpleTask = &grafanaCollector{}
@@ -97,7 +107,7 @@ func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) er
 			continue
 		}
 		c.logger.Debugf("extracting metrics for the dashboard %s with UID %q", h.Title, h.UID)
-		metrics, partialMetrics, errs := grafana.Analyze(dashboard, c.analyzer)
+		metrics, partialMetrics, errs := grafana.AnalyzeWithFilter(dashboard, c.analyzer, c.datasourceFilter)
 		for _, logErr := range errs {
 			logErr.Log(c.logger)
 		}
