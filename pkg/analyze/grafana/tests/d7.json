@@ -1,0 +1,47 @@
+{
+  "uid": "test-string-datasource",
+  "title": "Test String Datasource",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Panel with String Datasource",
+      "targets": [
+        {
+          "datasource": "${DS_PROMETHEUS}",
+          "expr": "up{job=\"test\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Panel with Object Datasource",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus-uid-123"
+          },
+          "expr": "cpu_usage{instance=\"test\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Panel with String Datasource to Ignore",
+      "targets": [
+        {
+          "datasource": "ignore-this-uid",
+          "expr": "memory_usage{job=\"test\"}",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "rows": [],
+  "templating": {
+    "list": []
+  }
+}
+

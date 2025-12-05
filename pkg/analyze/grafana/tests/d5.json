@@ -1,0 +1,76 @@
+{
+    "uid": "test-datasource-filter",
+    "title": "Test Datasource Filter",
+    "panels": [
+        {
+            "type": "stat",
+            "title": "Prometheus Panel",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "prometheus-uid-123"
+                    },
+                    "expr": "up{job=\"test\"}",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "type": "stat",
+            "title": "Postgres Panel",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "postgres",
+                        "uid": "bf5b9901-8a28-4501-a0c2-726b4ee3f15d"
+                    },
+                    "expr": "SELECT count(*) FROM users",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "type": "stat",
+            "title": "MySQL Panel",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "mysql",
+                        "uid": "mysql-uid-456"
+                    },
+                    "expr": "SELECT count(*) FROM orders",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "type": "stat",
+            "title": "Prometheus with Specific UID",
+            "targets": [
+                {
+                    "datasource": {
+                        "type": "prometheus",
+                        "uid": "ignore-this-uid"
+                    },
+                    "expr": "cpu_usage{instance=\"test\"}",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "type": "stat",
+            "title": "Panel without datasource",
+            "targets": [
+                {
+                    "expr": "memory_usage{job=\"test\"}",
+                    "refId": "A"
+                }
+            ]
+        }
+    ],
+    "rows": [],
+    "templating": {
+        "list": []
+    }
+}

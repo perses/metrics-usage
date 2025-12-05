@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/perses/perses/pkg/client/config"
@@ -191,11 +192,13 @@ func (c *PersesCollector) Verify() error {
 }
 
 type GrafanaCollector struct {
-	Enable            bool           `yaml:"enable"`
-	Period            model.Duration `yaml:"period,omitempty"`
-	MetricUsageClient *HTTPClient    `yaml:"metric_usage_client,omitempty"`
-	HTTPClient        HTTPClient     `yaml:"grafana_client"`
-	PublicURL         *common.URL    `yaml:"public_url,omitempty"`
+	Enable                bool           `yaml:"enable"`
+	Period                model.Duration `yaml:"period,omitempty"`
+	MetricUsageClient     *HTTPClient    `yaml:"metric_usage_client,omitempty"`
+	HTTPClient            HTTPClient     `yaml:"grafana_client"`
+	PublicURL             *common.URL    `yaml:"public_url,omitempty"`
+	IgnoreDatasourceTypes []string       `yaml:"ignore_datasource_types,omitempty"`
+	IgnoreDatasourceUIDs  []string       `yaml:"ignore_datasource_uids,omitempty"`
 }
 
 func (c *GrafanaCollector) Verify() error {
@@ -210,6 +213,31 @@ func (c *GrafanaCollector) Verify() error {
 	}
 	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
 		return fmt.Errorf("missing Metrics Usage URL for the grafana collector")
+	}
+	// Normalize ignore datasource types: deduplicate and lowercase
+	if len(c.IgnoreDatasourceTypes) > 0 {
+		typeSet := make(map[string]bool)
+		var normalizedTypes []string
+		for _, t := range c.IgnoreDatasourceTypes {
+			lowerType := strings.ToLower(t)
+			if !typeSet[lowerType] {
+				typeSet[lowerType] = true
+				normalizedTypes = append(normalizedTypes, lowerType)
+			}
+		}
+		c.IgnoreDatasourceTypes = normalizedTypes
+	}
+	// Deduplicate ignore datasource UIDs
+	if len(c.IgnoreDatasourceUIDs) > 0 {
+		uidSet := make(map[string]bool)
+		var normalizedUIDs []string
+		for _, uid := range c.IgnoreDatasourceUIDs {
+			if !uidSet[uid] {
+				uidSet[uid] = true
+				normalizedUIDs = append(normalizedUIDs, uid)
+			}
+		}
+		c.IgnoreDatasourceUIDs = normalizedUIDs
 	}
 	return nil
 }

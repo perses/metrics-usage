@@ -137,3 +137,138 @@ func TestAnalyze(t *testing.T) {
 		})
 	}
 }
+
+func TestAnalyzeWithFilter(t *testing.T) {
+	analyzer, err := expr.NewAnalyzer(expr.EnginePromQL)
+	if err != nil {
+		t.Fatalf("failed to initialize analyzer: %v", err)
+	}
+
+	dashboard, err := unmarshalDashboard("tests/d5.json")
+	if err != nil {
+		t.Fatalf("failed to unmarshal dashboard: %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		filter         *DatasourceFilter
+		resultMetrics  []string
+		invalidMetrics []string
+	}{
+		{
+			name:           "no filter - all metrics extracted",
+			filter:         nil,
+			resultMetrics:  []string{"up", "cpu_usage", "memory_usage"},
+			invalidMetrics: []string{},
+		},
+		{
+			name: "filter by postgres type - postgres target ignored",
+			filter: &DatasourceFilter{
+				IgnoreTypes: modelAPIV1.NewSet("postgres"),
+			},
+			resultMetrics:  []string{"up", "cpu_usage", "memory_usage"},
+			invalidMetrics: []string{},
+		},
+		{
+			name: "filter by multiple types - postgres and mysql ignored",
+			filter: &DatasourceFilter{
+				IgnoreTypes: modelAPIV1.NewSet("postgres", "mysql"),
+			},
+			resultMetrics:  []string{"up", "cpu_usage", "memory_usage"},
+			invalidMetrics: []string{},
+		},
+		{
+			name: "filter by UID - specific prometheus target ignored",
+			filter: &DatasourceFilter{
+				IgnoreUIDs: modelAPIV1.NewSet("ignore-this-uid"),
+			},
+			resultMetrics:  []string{"up", "memory_usage"},
+			invalidMetrics: []string{},
+		},
+		{
+			name: "filter by both type and UID",
+			filter: &DatasourceFilter{
+				IgnoreTypes: modelAPIV1.NewSet("postgres"),
+				IgnoreUIDs:  modelAPIV1.NewSet("ignore-this-uid"),
+			},
+			resultMetrics:  []string{"up", "memory_usage"},
+			invalidMetrics: []string{},
+		},
+		{
+			name: "filter case insensitive - postgres matches POSTGRES in target",
+			filter: &DatasourceFilter{
+				IgnoreTypes: modelAPIV1.NewSet("postgres"),
+			},
+			resultMetrics:  []string{"up", "cpu_usage", "memory_usage"},
+			invalidMetrics: []string{},
+		},
+	}
+
+	// Test case-insensitive matching separately
+	t.Run("case insensitive matching", func(t *testing.T) {
+		caseDashboard, err := unmarshalDashboard("tests/d6.json")
+		if err != nil {
+			t.Fatalf("failed to unmarshal dashboard: %v", err)
+		}
+		filter := &DatasourceFilter{
+			IgnoreTypes: modelAPIV1.NewSet("postgres"),
+		}
+		metrics, partialMetrics, _ := AnalyzeWithFilter(caseDashboard, analyzer, filter)
+		metricsAsSlice := metrics.TransformAsSlice()
+		slices.Sort(metricsAsSlice)
+		assert.Equal(t, []string{"up"}, metricsAsSlice, "POSTGRES type should be ignored when filter has lowercase postgres")
+		assert.Empty(t, partialMetrics.TransformAsSlice())
+	})
+
+	// Test string datasource format
+	t.Run("string datasource format", func(t *testing.T) {
+		stringDashboard, err := unmarshalDashboard("tests/d7.json")
+		if err != nil {
+			t.Fatalf("failed to unmarshal dashboard: %v", err)
+		}
+		// Test without filter - should extract all metrics
+		metrics, partialMetrics, _ := AnalyzeWithFilter(stringDashboard, analyzer, nil)
+		metricsAsSlice := metrics.TransformAsSlice()
+		slices.Sort(metricsAsSlice)
+		expectedMetrics := []string{"cpu_usage", "memory_usage", "up"}
+		slices.Sort(expectedMetrics)
+		assert.Equal(t, expectedMetrics, metricsAsSlice, "should extract metrics from both string and object datasources")
+		assert.Empty(t, partialMetrics.TransformAsSlice())
+
+		// Test with UID filter - should ignore string datasource matching the UID
+		filter := &DatasourceFilter{
+			IgnoreUIDs: modelAPIV1.NewSet("ignore-this-uid"),
+		}
+		metrics, partialMetrics, _ = AnalyzeWithFilter(stringDashboard, analyzer, filter)
+		metricsAsSlice = metrics.TransformAsSlice()
+		slices.Sort(metricsAsSlice)
+		expectedMetrics = []string{"cpu_usage", "up"}
+		slices.Sort(expectedMetrics)
+		assert.Equal(t, expectedMetrics, metricsAsSlice, "should ignore string datasource when UID matches filter")
+		assert.Empty(t, partialMetrics.TransformAsSlice())
+	})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			metrics, partialMetrics, errs := AnalyzeWithFilter(dashboard, analyzer, tt.filter)
+			// Errors are expected for SQL expressions that aren't filtered out, but we only care about metrics
+			_ = errs
+			metricsAsSlice := metrics.TransformAsSlice()
+			invalidMetricsAsSlice := partialMetrics.TransformAsSlice()
+			slices.Sort(metricsAsSlice)
+			slices.Sort(invalidMetricsAsSlice)
+			expectedMetrics := make([]string, len(tt.resultMetrics))
+			copy(expectedMetrics, tt.resultMetrics)
+			slices.Sort(expectedMetrics)
+			expectedInvalidMetrics := make([]string, len(tt.invalidMetrics))
+			copy(expectedInvalidMetrics, tt.invalidMetrics)
+			slices.Sort(expectedInvalidMetrics)
+			assert.Equal(t, expectedMetrics, metricsAsSlice, "metrics mismatch")
+			if len(expectedInvalidMetrics) == 0 {
+				assert.Empty(t, invalidMetricsAsSlice, "invalid metrics should be empty")
+			} else {
+				assert.Equal(t, expectedInvalidMetrics, invalidMetricsAsSlice, "invalid metrics mismatch")
+			}
+		})
+	}
+}
