@@ -157,21 +157,17 @@ type DatasourceFilter struct {
 
 // shouldIgnoreDatasource checks if a datasource should be ignored based on the filter configuration.
 // Returns true if the datasource matches any ignore criteria (type or UID).
-func shouldIgnoreDatasource(filter *DatasourceFilter, ds *DatasourceRef) bool {
-	if filter == nil || ds == nil {
+func (f *DatasourceFilter) shouldIgnoreDatasource(ds *DatasourceRef) bool {
+	if ds == nil {
 		return false
 	}
 	// Check if datasource type matches ignore list (case-insensitive)
-	if filter.IgnoreTypes != nil && ds.Type != "" {
-		if filter.IgnoreTypes.Contains(strings.ToLower(ds.Type)) {
-			return true
-		}
+	if ds.Type != "" && f.IgnoreTypes.Contains(strings.ToLower(ds.Type)) {
+		return true
 	}
 	// Check if datasource UID matches ignore list
-	if filter.IgnoreUIDs != nil && ds.UID != "" {
-		if filter.IgnoreUIDs.Contains(ds.UID) {
-			return true
-		}
+	if ds.UID != "" && f.IgnoreUIDs.Contains(ds.UID) {
+		return true
 	}
 	return false
 }
@@ -215,7 +211,7 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 				continue
 			}
 			// Skip targets whose datasource matches the filter criteria
-			if shouldIgnoreDatasource(filter, t.Datasource) {
+			if filter != nil && filter.shouldIgnoreDatasource(t.Datasource) {
 				continue
 			}
 			exprWithVariableReplaced := replaceVariables(t.Expr, staticVariables)
@@ -254,7 +250,7 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 			continue
 		}
 		// Skip variables whose datasource matches the filter criteria
-		if shouldIgnoreDatasource(filter, v.Datasource) {
+		if filter != nil && filter.shouldIgnoreDatasource(v.Datasource) {
 			continue
 		}
 		query, err := v.extractQueryFromVariableTemplating()
