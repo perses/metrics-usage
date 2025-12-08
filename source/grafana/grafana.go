@@ -59,7 +59,6 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector, analyzer ex
 	if cfg.PublicURL != nil {
 		url = cfg.PublicURL.URL
 	}
-	// Build datasource filter from config
 	datasourceFilter := &grafana.DatasourceFilter{
 		IgnoreTypes: modelAPIV1.NewSet(cfg.IgnoreDatasourceTypes...),
 		IgnoreUIDs:  modelAPIV1.NewSet(cfg.IgnoreDatasourceUIDs...),

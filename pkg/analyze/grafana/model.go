@@ -27,15 +27,11 @@ type DatasourceRef struct {
 // string format (e.g., "${DS_PROMETHEUS}" or "prometheus") and object format
 // (e.g., {"type": "prometheus", "uid": "some-uid"}).
 func (d *DatasourceRef) UnmarshalJSON(data []byte) error {
-	// Try to unmarshal as string first
 	var str string
 	if err := json.Unmarshal(data, &str); err == nil {
-		// If it's a string, treat it as a UID (could be a variable reference like "${DS_PROMETHEUS}")
-		// Reset the struct to avoid leaking previous values
 		*d = DatasourceRef{UID: str}
 		return nil
 	}
-	// If not a string, try to unmarshal as object
 	type alias DatasourceRef
 	var obj alias
 	if err := json.Unmarshal(data, &obj); err != nil {

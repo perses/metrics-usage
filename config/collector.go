@@ -214,7 +214,6 @@ func (c *GrafanaCollector) Verify() error {
 	if c.MetricUsageClient != nil && c.MetricUsageClient.URL == nil {
 		return fmt.Errorf("missing Metrics Usage URL for the grafana collector")
 	}
-	// Normalize ignore datasource types: deduplicate and lowercase
 	if len(c.IgnoreDatasourceTypes) > 0 {
 		typeSet := make(map[string]bool)
 		var normalizedTypes []string

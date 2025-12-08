@@ -149,10 +149,8 @@ var (
 
 // DatasourceFilter contains configuration for filtering out targets based on their datasource.
 type DatasourceFilter struct {
-	// IgnoreTypes is a set of datasource types to ignore (e.g., "postgres", "mysql").
 	IgnoreTypes modelAPIV1.Set[string]
-	// IgnoreUIDs is a set of datasource UIDs to ignore.
-	IgnoreUIDs modelAPIV1.Set[string]
+	IgnoreUIDs  modelAPIV1.Set[string]
 }
 
 // shouldIgnoreDatasource checks if a datasource should be ignored based on the filter configuration.
@@ -161,11 +159,9 @@ func (f *DatasourceFilter) shouldIgnoreDatasource(ds *DatasourceRef) bool {
 	if ds == nil {
 		return false
 	}
-	// Check if datasource type matches ignore list (case-insensitive)
 	if ds.Type != "" && f.IgnoreTypes.Contains(strings.ToLower(ds.Type)) {
 		return true
 	}
-	// Check if datasource UID matches ignore list
 	if ds.UID != "" && f.IgnoreUIDs.Contains(ds.UID) {
 		return true
 	}
@@ -210,7 +206,6 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 			if len(t.Expr) == 0 {
 				continue
 			}
-			// Skip targets whose datasource matches the filter criteria
 			if filter != nil && filter.shouldIgnoreDatasource(t.Datasource) {
 				continue
 			}
@@ -249,7 +244,6 @@ func extractMetricsFromVariables(variables []templateVar, staticVariables *strin
 		if v.Type != "query" {
 			continue
 		}
-		// Skip variables whose datasource matches the filter criteria
 		if filter != nil && filter.shouldIgnoreDatasource(v.Datasource) {
 			continue
 		}
