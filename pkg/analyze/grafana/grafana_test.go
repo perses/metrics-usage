@@ -137,3 +137,109 @@ func TestAnalyze(t *testing.T) {
 		})
 	}
 }
+
+func TestAnalyzeWithFilter(t *testing.T) {
+	analyzer, err := expr.NewAnalyzer(expr.EnginePromQL)
+	if err != nil {
+		t.Fatalf("failed to initialize analyzer: %v", err)
+	}
+
+	tests := []struct {
+		name           string
+		dashboardFile  string
+		filter         *DatasourceFilter
+		resultMetrics  []string
+		invalidMetrics []string
+	}{
+		{
+			name:           "no filter - all metrics extracted",
+			dashboardFile:  "tests/d5.json",
+			filter:         nil,
+			resultMetrics:  []string{"cpu_usage", "memory_usage", "up"},
+			invalidMetrics: []string{},
+		},
+		{
+			name:          "filter by postgres type - postgres target ignored",
+			dashboardFile: "tests/d5.json",
+			filter: &DatasourceFilter{
+				IgnoreTypes: modelAPIV1.NewSet("postgres"),
+			},
+			resultMetrics:  []string{"cpu_usage", "memory_usage", "up"},
+			invalidMetrics: []string{},
+		},
+		{
+			name:          "filter by multiple types - postgres and mysql ignored",
+			dashboardFile: "tests/d5.json",
+			filter: &DatasourceFilter{
+				IgnoreTypes: modelAPIV1.NewSet("postgres", "mysql"),
+			},
+			resultMetrics:  []string{"cpu_usage", "memory_usage", "up"},
+			invalidMetrics: []string{},
+		},
+		{
+			name:          "filter by UID - specific prometheus target ignored",
+			dashboardFile: "tests/d5.json",
+			filter: &DatasourceFilter{
+				IgnoreUIDs: modelAPIV1.NewSet("ignore-this-uid"),
+			},
+			resultMetrics:  []string{"memory_usage", "up"},
+			invalidMetrics: []string{},
+		},
+		{
+			name:          "filter by both type and UID",
+			dashboardFile: "tests/d5.json",
+			filter: &DatasourceFilter{
+				IgnoreTypes: modelAPIV1.NewSet("postgres"),
+				IgnoreUIDs:  modelAPIV1.NewSet("ignore-this-uid"),
+			},
+			resultMetrics:  []string{"memory_usage", "up"},
+			invalidMetrics: []string{},
+		},
+		{
+			name:          "filter case insensitive - postgres matches POSTGRES in target",
+			dashboardFile: "tests/d6.json",
+			filter: &DatasourceFilter{
+				IgnoreTypes: modelAPIV1.NewSet("postgres"),
+			},
+			resultMetrics:  []string{"up"},
+			invalidMetrics: []string{},
+		},
+		{
+			name:           "string datasource format - no filter",
+			dashboardFile:  "tests/d7.json",
+			filter:         nil,
+			resultMetrics:  []string{"cpu_usage", "memory_usage", "up"},
+			invalidMetrics: []string{},
+		},
+		{
+			name:          "string datasource format - filter by UID",
+			dashboardFile: "tests/d7.json",
+			filter: &DatasourceFilter{
+				IgnoreUIDs: modelAPIV1.NewSet("ignore-this-uid"),
+			},
+			resultMetrics:  []string{"cpu_usage", "up"},
+			invalidMetrics: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dashboard, err := unmarshalDashboard(tt.dashboardFile)
+			if err != nil {
+				t.Fatalf("failed to unmarshal dashboard: %v", err)
+			}
+
+			metrics, partialMetrics, _ := AnalyzeWithFilter(dashboard, analyzer, tt.filter)
+
+			metricsAsSlice := metrics.TransformAsSlice()
+			invalidMetricsAsSlice := partialMetrics.TransformAsSlice()
+
+			assert.Equal(t, tt.resultMetrics, metricsAsSlice)
+			if len(tt.invalidMetrics) == 0 {
+				assert.Empty(t, invalidMetricsAsSlice)
+			} else {
+				assert.Equal(t, tt.invalidMetrics, invalidMetricsAsSlice)
+			}
+		})
+	}
+}

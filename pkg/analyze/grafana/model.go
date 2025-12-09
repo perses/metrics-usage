@@ -13,10 +13,37 @@
 
 package grafana
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
+
+type DatasourceRef struct {
+	Type string `json:"type,omitempty"`
+	UID  string `json:"uid,omitempty"`
+}
+
+// UnmarshalJSON implements custom unmarshaling for DatasourceRef to handle both
+// string format (e.g., "${DS_PROMETHEUS}" or "prometheus") and object format
+// (e.g., {"type": "prometheus", "uid": "some-uid"}).
+func (d *DatasourceRef) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err == nil {
+		*d = DatasourceRef{UID: str}
+		return nil
+	}
+	type alias DatasourceRef
+	var obj alias
+	if err := json.Unmarshal(data, &obj); err != nil {
+		return err
+	}
+	*d = DatasourceRef(obj)
+	return nil
+}
 
 type Target struct {
-	Expr string `json:"expr,omitempty"`
+	Expr       string         `json:"expr,omitempty"`
+	Datasource *DatasourceRef `json:"datasource,omitempty"`
 }
 
 type Panel struct {
@@ -35,10 +62,11 @@ type option struct {
 }
 
 type templateVar struct {
-	Name    string   `json:"name"`
-	Type    string   `json:"type"`
-	Query   any      `json:"query"`
-	Options []option `json:"options"`
+	Name       string         `json:"name"`
+	Type       string         `json:"type"`
+	Query      any            `json:"query"`
+	Options    []option       `json:"options"`
+	Datasource *DatasourceRef `json:"datasource,omitempty"`
 }
 
 // extractQueryFromVariableTemplating will extract the PromQL expression from query.

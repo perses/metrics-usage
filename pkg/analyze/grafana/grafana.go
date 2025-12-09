@@ -147,7 +147,36 @@ var (
 	variableReplacer = strings.NewReplacer(generateGrafanaTupleVariableSyntaxReplacer(globalVariableList)...)
 )
 
+// DatasourceFilter contains configuration for filtering out targets based on their datasource.
+type DatasourceFilter struct {
+	IgnoreTypes modelAPIV1.Set[string]
+	IgnoreUIDs  modelAPIV1.Set[string]
+}
+
+// shouldIgnoreDatasource checks if a datasource should be ignored based on the filter configuration.
+// Returns true if the datasource matches any ignore criteria (type or UID).
+func (f *DatasourceFilter) shouldIgnoreDatasource(ds *DatasourceRef) bool {
+	if ds == nil {
+		return false
+	}
+	if ds.Type != "" && f.IgnoreTypes.Contains(strings.ToLower(ds.Type)) {
+		return true
+	}
+	if ds.UID != "" && f.IgnoreUIDs.Contains(ds.UID) {
+		return true
+	}
+	return false
+}
+
+// Analyze analyzes a Grafana dashboard and extracts metric names from expressions.
+// This is a convenience function that calls AnalyzeWithFilter with a nil filter.
 func Analyze(dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+	return AnalyzeWithFilter(dashboard, analyzer, nil)
+}
+
+// AnalyzeWithFilter analyzes a Grafana dashboard and extracts metric names from expressions,
+// optionally filtering out targets based on their datasource configuration.
+func AnalyzeWithFilter(dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	if analyzer == nil {
 		return nil, nil, []*modelAPIV1.LogError{
 			{Error: fmt.Errorf("expression analyzer is not configured")},
@@ -155,26 +184,29 @@ func Analyze(dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (modelAPIV1
 	}
 	staticVariables := strings.NewReplacer(generateGrafanaVariableSyntaxReplacer(extractStaticVariables(dashboard.Templating.List))...)
 	allVariableNames := collectAllVariableName(dashboard.Templating.List)
-	m1, inv1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, allVariableNames, dashboard, analyzer)
+	m1, inv1, err1 := extractMetricsFromPanels(dashboard.Panels, staticVariables, allVariableNames, dashboard, analyzer, filter)
 	for _, r := range dashboard.Rows {
-		m2, inv2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, allVariableNames, dashboard, analyzer)
+		m2, inv2, err2 := extractMetricsFromPanels(r.Panels, staticVariables, allVariableNames, dashboard, analyzer, filter)
 		m1.Merge(m2)
 		inv1.Merge(inv2)
 		err1 = append(err1, err2...)
 	}
-	m3, inv3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, allVariableNames, dashboard, analyzer)
+	m3, inv3, err3 := extractMetricsFromVariables(dashboard.Templating.List, staticVariables, allVariableNames, dashboard, analyzer, filter)
 	m1.Merge(m3)
 	inv1.Merge(inv3)
 	return m1, inv1, append(err1, err3...)
 }
 
-func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
 	partialMetricsResult := modelAPIV1.Set[string]{}
 	for _, p := range panels {
 		for _, t := range extractTarget(p) {
 			if len(t.Expr) == 0 {
+				continue
+			}
+			if filter != nil && filter.shouldIgnoreDatasource(t.Datasource) {
 				continue
 			}
 			exprWithVariableReplaced := replaceVariables(t.Expr, staticVariables)
@@ -204,12 +236,15 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 	return result, partialMetricsResult, errs
 }
 
-func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := modelAPIV1.Set[string]{}
 	partialMetricsResult := modelAPIV1.Set[string]{}
 	for _, v := range variables {
 		if v.Type != "query" {
+			continue
+		}
+		if filter != nil && filter.shouldIgnoreDatasource(v.Datasource) {
 			continue
 		}
 		query, err := v.extractQueryFromVariableTemplating()
