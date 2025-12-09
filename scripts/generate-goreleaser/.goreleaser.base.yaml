@@ -23,9 +23,10 @@ builds:
       - "{{.Env.LDFLAGS}}"
 archives:
   - id: "default"
-    builds:
+    ids:
       - "metrics-usage"
-    format: "tar.gz"
+    formats:
+      - "tar.gz"
     files:
       - LICENSE
       - README.md
