@@ -16,6 +16,7 @@ package expr
 import (
 	"github.com/VictoriaMetrics/metricsql"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/prometheus/common/model"
 )
 
 type metricsqlAnalyzer struct{}
@@ -36,7 +37,7 @@ func (a *metricsqlAnalyzer) Analyze(query string) (modelAPIV1.Set[string], model
 			// Each group is a slice of LabelFilter
 			for _, filterGroup := range me.LabelFilterss {
 				for _, filter := range filterGroup {
-					if filter.Label == "__name__" {
+					if filter.Label == model.MetricNameLabel {
 						value := filter.Value
 						// If it's a regexp or not a valid metric name, treat as partial
 						if filter.IsRegexp || !isValidMetricName(value) {
