@@ -17,6 +17,7 @@ import (
 	"regexp"
 
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/promql/parser"
 )
 
@@ -42,7 +43,7 @@ func (a *promqlAnalyzer) Analyze(query string) (modelAPIV1.Set[string], modelAPI
 				return nil
 			}
 			for _, m := range n.LabelMatchers {
-				if m.Name == "__name__" {
+				if m.Name == model.MetricNameLabel {
 					if isValidMetricName(m.Value) {
 						metricNames.Add(m.Value)
 					} else {
