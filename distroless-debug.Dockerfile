@@ -1,18 +1,13 @@
 FROM alpine AS build-env
 RUN apk add --update --no-cache mailcap
-RUN mkdir /perses
 
-FROM gcr.io/distroless/static-debian11:debug
-
+FROM gcr.io/distroless/static-debian12:debug-nonroot
+ARG TARGETPLATFORM
 LABEL maintainer="The Perses Authors <perses-team@googlegroups.com>"
 
-USER nobody
-
-COPY --chown=nobody:nobody metrics-usage                      /bin/metrics-usage
-COPY --chown=nobody:nobody LICENSE                           /LICENSE
-COPY --from=build-env --chown=nobody:nobody                  /etc/mime.types /etc/mime.types
-
-WORKDIR /perses
+COPY  ${TARGETPLATFORM}/metrics-usage                      /bin/metrics-usage
+COPY  LICENSE                                              /LICENSE
+COPY --from=build-env                                      /etc/mime.types /etc/mime.types
 
 EXPOSE     8080
 ENTRYPOINT [ "/bin/metrics-usage" ]

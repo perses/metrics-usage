@@ -16,14 +16,17 @@ package main
 import (
 	_ "embed"
 
-	goreleasergenerate "github.com/perses/perses/scripts/generate-docker-goreleaser-config"
+	"github.com/perses/perses/scripts/pkg/goreleaser"
 )
 
 //go:embed .goreleaser.base.yaml
 var baseConfig []byte
 
 func main() {
-	goreleasergenerate.GenerateGoreleaserConfig(baseConfig, "metrics-usage", []string{
-		"LICENSE",
+	goreleaser.Generate(baseConfig, &goreleaser.DockerConfig{
+		ImageName:  "metrics-usage",
+		DebugImage: true,
+		BinaryIDs:  []string{"metrics-usage"},
+		ExtraFiles: []string{"LICENSE"},
 	})
 }
