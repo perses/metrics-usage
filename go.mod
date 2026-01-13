@@ -10,7 +10,7 @@ require (
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.29.1
-	github.com/perses/perses v0.53.0-rc.0
+	github.com/perses/perses v0.53.0-rc.0.0.20260113112038-1e65a7475ba9
 	github.com/perses/plugins/prometheus v0.56.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.5

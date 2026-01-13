@@ -11,22 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package prometheus
+package main
 
 import (
-	"testing"
+	"flag"
 
-	"github.com/perses/metrics-usage/pkg/analyze/expr"
-	"github.com/stretchr/testify/assert"
+	"github.com/perses/perses/scripts/pkg/license"
 )
 
-func TestAnalyzePromQLExpression(t *testing.T) {
-	analyzer, err := expr.NewAnalyzer(expr.EnginePromQL)
-	if !assert.NoError(t, err) {
-		return
-	}
-
-	result, _, err := AnalyzePromQLExpression("service_status{env=~\"$env\",region=~\"$region\"}", analyzer)
-	assert.NoError(t, err)
-	assert.Equal(t, []string{"service_status"}, result.TransformAsSlice())
+func main() {
+	l := license.DefaultLicense()
+	l.RegisterFlags()
+	flag.Parse()
+	l.Execute()
 }
