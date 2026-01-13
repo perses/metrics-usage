@@ -50,6 +50,16 @@ checkstyle:
 	@echo ">> checking code style"
 	$(GOCI) run --timeout 5m
 
+.PHONY: checklicense
+checklicense:
+	@echo ">> checking license"
+	$(GO) run ./scripts/check-license --check
+
+.PHONY: fixlicense
+fixlicense:
+	@echo ">> adding license header where it's missing"
+	$(GO) run ./scripts/check-license --fix
+
 .PHONY: fmt
 fmt:
 	@echo ">> format code"
