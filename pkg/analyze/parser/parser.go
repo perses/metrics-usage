@@ -13,21 +13,23 @@
 
 package parser
 
-import modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+import (
+	"github.com/perses/common/set"
+)
 
-func ExtractMetricNameWithVariable(expr string) modelAPIV1.Set[string] {
+func ExtractMetricNameWithVariable(expr string) set.Set[string] {
 	p := &parser{
-		metrics: modelAPIV1.Set[string]{},
+		metrics: set.Set[string]{},
 	}
 	return p.parse(expr)
 }
 
 type parser struct {
-	metrics       modelAPIV1.Set[string]
+	metrics       set.Set[string]
 	currentMetric string
 }
 
-func (p *parser) parse(expr string) modelAPIV1.Set[string] {
+func (p *parser) parse(expr string) set.Set[string] {
 	query := []rune(expr)
 	for i := 0; i < len(query); i++ {
 		char := query[i]

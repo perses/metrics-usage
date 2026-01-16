@@ -19,6 +19,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/perses/common/set"
 	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/stretchr/testify/assert"
@@ -162,7 +163,7 @@ func TestAnalyzeWithFilter(t *testing.T) {
 			name:          "filter by postgres type - postgres target ignored",
 			dashboardFile: "tests/d5.json",
 			filter: &DatasourceFilter{
-				IgnoreTypes: modelAPIV1.NewSet("postgres"),
+				IgnoreTypes: set.New("postgres"),
 			},
 			resultMetrics:  []string{"cpu_usage", "memory_usage", "up"},
 			invalidMetrics: []string{},
@@ -171,7 +172,7 @@ func TestAnalyzeWithFilter(t *testing.T) {
 			name:          "filter by multiple types - postgres and mysql ignored",
 			dashboardFile: "tests/d5.json",
 			filter: &DatasourceFilter{
-				IgnoreTypes: modelAPIV1.NewSet("postgres", "mysql"),
+				IgnoreTypes: set.New("postgres", "mysql"),
 			},
 			resultMetrics:  []string{"cpu_usage", "memory_usage", "up"},
 			invalidMetrics: []string{},
@@ -180,7 +181,7 @@ func TestAnalyzeWithFilter(t *testing.T) {
 			name:          "filter by UID - specific prometheus target ignored",
 			dashboardFile: "tests/d5.json",
 			filter: &DatasourceFilter{
-				IgnoreUIDs: modelAPIV1.NewSet("ignore-this-uid"),
+				IgnoreUIDs: set.New("ignore-this-uid"),
 			},
 			resultMetrics:  []string{"memory_usage", "up"},
 			invalidMetrics: []string{},
@@ -189,8 +190,8 @@ func TestAnalyzeWithFilter(t *testing.T) {
 			name:          "filter by both type and UID",
 			dashboardFile: "tests/d5.json",
 			filter: &DatasourceFilter{
-				IgnoreTypes: modelAPIV1.NewSet("postgres"),
-				IgnoreUIDs:  modelAPIV1.NewSet("ignore-this-uid"),
+				IgnoreTypes: set.New("postgres"),
+				IgnoreUIDs:  set.New("ignore-this-uid"),
 			},
 			resultMetrics:  []string{"memory_usage", "up"},
 			invalidMetrics: []string{},
@@ -199,7 +200,7 @@ func TestAnalyzeWithFilter(t *testing.T) {
 			name:          "filter case insensitive - postgres matches POSTGRES in target",
 			dashboardFile: "tests/d6.json",
 			filter: &DatasourceFilter{
-				IgnoreTypes: modelAPIV1.NewSet("postgres"),
+				IgnoreTypes: set.New("postgres"),
 			},
 			resultMetrics:  []string{"up"},
 			invalidMetrics: []string{},
@@ -215,7 +216,7 @@ func TestAnalyzeWithFilter(t *testing.T) {
 			name:          "string datasource format - filter by UID",
 			dashboardFile: "tests/d7.json",
 			filter: &DatasourceFilter{
-				IgnoreUIDs: modelAPIV1.NewSet("ignore-this-uid"),
+				IgnoreUIDs: set.New("ignore-this-uid"),
 			},
 			resultMetrics:  []string{"cpu_usage", "up"},
 			invalidMetrics: []string{},

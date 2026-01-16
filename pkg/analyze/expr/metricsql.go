@@ -15,20 +15,20 @@ package expr
 
 import (
 	"github.com/VictoriaMetrics/metricsql"
-	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/common/set"
 	"github.com/prometheus/common/model"
 )
 
 type metricsqlAnalyzer struct{}
 
-func (a *metricsqlAnalyzer) Analyze(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
+func (a *metricsqlAnalyzer) Analyze(query string) (set.Set[string], set.Set[string], error) {
 	expr, err := metricsql.Parse(query)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	metricNames := modelAPIV1.Set[string]{}
-	partialMetricNames := modelAPIV1.Set[string]{}
+	metricNames := set.Set[string]{}
+	partialMetricNames := set.Set[string]{}
 
 	// Walk the AST to find metric selectors
 	metricsql.VisitAll(expr, func(e metricsql.Expr) {
