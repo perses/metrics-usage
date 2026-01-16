@@ -9,12 +9,12 @@ require (
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20250828163705-969607f81baa
 	github.com/labstack/echo/v4 v4.15.0
 	github.com/lithammer/fuzzysearch v1.1.8
-	github.com/perses/common v0.28.1
+	github.com/perses/common v0.29.1
 	github.com/perses/perses v0.53.0-rc.0
 	github.com/perses/plugins/prometheus v0.56.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.67.5
-	github.com/prometheus/prometheus v0.309.0
+	github.com/prometheus/prometheus v0.309.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.34.0
@@ -46,7 +46,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dennwc/varint v1.0.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/flc1125/go-cron/v4 v4.7.1 // indirect
+	github.com/flc1125/go-cron/v4 v4.7.2 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
