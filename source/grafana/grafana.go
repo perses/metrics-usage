@@ -23,6 +23,7 @@ import (
 	"github.com/grafana/grafana-openapi-client-go/client/search"
 	grafanaModels "github.com/grafana/grafana-openapi-client-go/models"
 	"github.com/perses/common/async"
+	"github.com/perses/common/set"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
 	"github.com/perses/metrics-usage/pkg/analyze/expr"
@@ -60,8 +61,8 @@ func NewCollector(db database.Database, cfg config.GrafanaCollector, analyzer ex
 		url = cfg.PublicURL.URL
 	}
 	datasourceFilter := &grafana.DatasourceFilter{
-		IgnoreTypes: modelAPIV1.NewSet(cfg.IgnoreDatasourceTypes...),
-		IgnoreUIDs:  modelAPIV1.NewSet(cfg.IgnoreDatasourceUIDs...),
+		IgnoreTypes: set.New(cfg.IgnoreDatasourceTypes...),
+		IgnoreUIDs:  set.New(cfg.IgnoreDatasourceUIDs...),
 	}
 	return &grafanaCollector{
 		grafanaURL:    url.String(),
@@ -154,7 +155,7 @@ func (c *grafanaCollector) collectAllDashboardUID(ctx context.Context) ([]*grafa
 	return result, nil
 }
 
-func (c *grafanaCollector) generateUsage(metricNames modelAPIV1.Set[string], currentDashboard *grafana.SimplifiedDashboard) map[string]*modelAPIV1.MetricUsage {
+func (c *grafanaCollector) generateUsage(metricNames set.Set[string], currentDashboard *grafana.SimplifiedDashboard) map[string]*modelAPIV1.MetricUsage {
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	dashboardURL := fmt.Sprintf("%s/d/%s", c.grafanaURL, currentDashboard.UID)
 	for metricName := range metricNames {
@@ -166,7 +167,7 @@ func (c *grafanaCollector) generateUsage(metricNames modelAPIV1.Set[string], cur
 			})
 		} else {
 			metricUsage[metricName] = &modelAPIV1.MetricUsage{
-				Dashboards: modelAPIV1.NewSet(modelAPIV1.DashboardUsage{
+				Dashboards: set.New(modelAPIV1.DashboardUsage{
 					ID:   currentDashboard.UID,
 					Name: currentDashboard.Title,
 					URL:  dashboardURL,

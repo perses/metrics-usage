@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/perses/common/set"
 	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/perses/metrics-usage/pkg/analyze/parser"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
@@ -41,7 +42,7 @@ var variableReplacer = strings.NewReplacer(
 	"$__project", "perses",
 )
 
-func Analyze(dashboard *v1.Dashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func Analyze(dashboard *v1.Dashboard, analyzer expr.Analyzer) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
 	if analyzer == nil {
 		return nil, nil, []*modelAPIV1.LogError{
 			{Error: fmt.Errorf("expression analyzer is not configured")},
@@ -54,10 +55,10 @@ func Analyze(dashboard *v1.Dashboard, analyzer expr.Analyzer) (modelAPIV1.Set[st
 	return m1, inv1, append(err1, err2...)
 }
 
-func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard, analyzer expr.Analyzer) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
-	result := modelAPIV1.Set[string]{}
-	partialMetricsResult := modelAPIV1.Set[string]{}
+	result := set.Set[string]{}
+	partialMetricsResult := set.Set[string]{}
 	for panelName, panel := range panels {
 		for i, q := range panel.Spec.Queries {
 			if q.Spec.Plugin.Kind != query.PluginKind {
@@ -102,10 +103,10 @@ func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard 
 	return result, partialMetricsResult, errs
 }
 
-func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricUsageFromVariables(variables []dashboard.Variable, currentDashboard *v1.Dashboard, analyzer expr.Analyzer) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
-	result := modelAPIV1.Set[string]{}
-	partialMetricsResult := modelAPIV1.Set[string]{}
+	result := set.Set[string]{}
+	partialMetricsResult := set.Set[string]{}
 	for _, v := range variables {
 		if v.Kind != variable.KindList {
 			continue
