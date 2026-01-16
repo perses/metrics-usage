@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/perses/common/set"
 	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	"github.com/perses/metrics-usage/pkg/analyze/parser"
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
@@ -149,8 +150,8 @@ var (
 
 // DatasourceFilter contains configuration for filtering out targets based on their datasource.
 type DatasourceFilter struct {
-	IgnoreTypes modelAPIV1.Set[string]
-	IgnoreUIDs  modelAPIV1.Set[string]
+	IgnoreTypes set.Set[string]
+	IgnoreUIDs  set.Set[string]
 }
 
 // shouldIgnoreDatasource checks if a datasource should be ignored based on the filter configuration.
@@ -170,13 +171,13 @@ func (f *DatasourceFilter) shouldIgnoreDatasource(ds *DatasourceRef) bool {
 
 // Analyze analyzes a Grafana dashboard and extracts metric names from expressions.
 // This is a convenience function that calls AnalyzeWithFilter with a nil filter.
-func Analyze(dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func Analyze(dashboard *SimplifiedDashboard, analyzer expr.Analyzer) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
 	return AnalyzeWithFilter(dashboard, analyzer, nil)
 }
 
 // AnalyzeWithFilter analyzes a Grafana dashboard and extracts metric names from expressions,
 // optionally filtering out targets based on their datasource configuration.
-func AnalyzeWithFilter(dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func AnalyzeWithFilter(dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
 	if analyzer == nil {
 		return nil, nil, []*modelAPIV1.LogError{
 			{Error: fmt.Errorf("expression analyzer is not configured")},
@@ -197,10 +198,10 @@ func AnalyzeWithFilter(dashboard *SimplifiedDashboard, analyzer expr.Analyzer, f
 	return m1, inv1, append(err1, err3...)
 }
 
-func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer, allVariableNames set.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
-	result := modelAPIV1.Set[string]{}
-	partialMetricsResult := modelAPIV1.Set[string]{}
+	result := set.Set[string]{}
+	partialMetricsResult := set.Set[string]{}
 	for _, p := range panels {
 		for _, t := range extractTarget(p) {
 			if len(t.Expr) == 0 {
@@ -236,10 +237,10 @@ func extractMetricsFromPanels(panels []Panel, staticVariables *strings.Replacer,
 	return result, partialMetricsResult, errs
 }
 
-func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames modelAPIV1.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (modelAPIV1.Set[string], modelAPIV1.Set[string], []*modelAPIV1.LogError) {
+func extractMetricsFromVariables(variables []templateVar, staticVariables *strings.Replacer, allVariableNames set.Set[string], dashboard *SimplifiedDashboard, analyzer expr.Analyzer, filter *DatasourceFilter) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
-	result := modelAPIV1.Set[string]{}
-	partialMetricsResult := modelAPIV1.Set[string]{}
+	result := set.Set[string]{}
+	partialMetricsResult := set.Set[string]{}
 	for _, v := range variables {
 		if v.Type != "query" {
 			continue
@@ -323,8 +324,8 @@ func extractStaticVariables(variables []templateVar) map[string]string {
 	return result
 }
 
-func collectAllVariableName(variables []templateVar) modelAPIV1.Set[string] {
-	result := modelAPIV1.Set[string]{}
+func collectAllVariableName(variables []templateVar) set.Set[string] {
+	result := set.Set[string]{}
 	for _, v := range variables {
 		result.Add(v.Name)
 	}
@@ -341,7 +342,7 @@ func replaceVariables(expr string, staticVariables *strings.Replacer) string {
 
 // formatVariableInMetricName will replace the syntax of the variable by another one that can actually be parsed.
 // It will be useful for later when we want to know which metrics, this metric with variable is covered.
-func formatVariableInMetricName(metric string, variables modelAPIV1.Set[string]) string {
+func formatVariableInMetricName(metric string, variables set.Set[string]) string {
 	for v := range variables {
 		metric = strings.ReplaceAll(metric, fmt.Sprintf("$%s", v), fmt.Sprintf("${%s}", v))
 	}

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/perses/common/set"
 	"github.com/perses/metrics-usage/pkg/analyze/expr"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
@@ -102,7 +103,7 @@ func Analyze(ruleGroups []v1.RuleGroup, source string, analyzer expr.Analyzer) (
 // AnalyzePromQLExpression is returning a list of valid metric names extracted from the PromQL expression.
 // It also returned a list of partial metric names that likely look like a regexp.
 // This function is kept for backward compatibility and delegates to the provided expression analyzer.
-func AnalyzePromQLExpression(query string, analyzer expr.Analyzer) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
+func AnalyzePromQLExpression(query string, analyzer expr.Analyzer) (set.Set[string], set.Set[string], error) {
 	if analyzer == nil {
 		return nil, nil, fmt.Errorf("expression analyzer is not configured")
 	}
@@ -113,7 +114,7 @@ func IsValidMetricName(name string) bool {
 	return validMetricName.MatchString(name)
 }
 
-func populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames modelAPIV1.Set[string], item modelAPIV1.RuleUsage, isAlertingRules bool) {
+func populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames set.Set[string], item modelAPIV1.RuleUsage, isAlertingRules bool) {
 	for metricName := range metricNames {
 		if usage, ok := metricUsage[metricName]; ok {
 			if isAlertingRules {
@@ -124,11 +125,11 @@ func populateUsage(metricUsage map[string]*modelAPIV1.MetricUsage, metricNames m
 		} else {
 			u := &modelAPIV1.MetricUsage{}
 			if isAlertingRules {
-				u.AlertRules = modelAPIV1.NewSet(item)
-				u.RecordingRules = modelAPIV1.NewSet[modelAPIV1.RuleUsage]()
+				u.AlertRules = set.New(item)
+				u.RecordingRules = set.New[modelAPIV1.RuleUsage]()
 			} else {
-				u.RecordingRules = modelAPIV1.NewSet(item)
-				u.AlertRules = modelAPIV1.NewSet[modelAPIV1.RuleUsage]()
+				u.RecordingRules = set.New(item)
+				u.AlertRules = set.New[modelAPIV1.RuleUsage]()
 			}
 			metricUsage[metricName] = u
 		}

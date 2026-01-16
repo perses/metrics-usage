@@ -16,12 +16,12 @@ package expr
 import (
 	"fmt"
 
-	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/common/set"
 )
 
 // Analyzer is the interface for parsing query expressions and extracting metric names
 type Analyzer interface {
-	Analyze(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error)
+	Analyze(query string) (set.Set[string], set.Set[string], error)
 }
 
 const (

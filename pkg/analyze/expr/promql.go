@@ -16,7 +16,7 @@ package expr
 import (
 	"regexp"
 
-	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
+	"github.com/perses/common/set"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/promql/parser"
 )
@@ -25,13 +25,13 @@ var validMetricName = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 
 type promqlAnalyzer struct{}
 
-func (a *promqlAnalyzer) Analyze(query string) (modelAPIV1.Set[string], modelAPIV1.Set[string], error) {
+func (a *promqlAnalyzer) Analyze(query string) (set.Set[string], set.Set[string], error) {
 	expr, err := parser.ParseExpr(query)
 	if err != nil {
 		return nil, nil, err
 	}
-	metricNames := modelAPIV1.Set[string]{}
-	partialMetricNames := modelAPIV1.Set[string]{}
+	metricNames := set.Set[string]{}
+	partialMetricNames := set.Set[string]{}
 	parser.Inspect(expr, func(node parser.Node, _ []parser.Node) error {
 		if n, ok := node.(*parser.VectorSelector); ok {
 			// The metric name is only present when the node is a VectorSelector.
