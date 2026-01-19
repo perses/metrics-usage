@@ -14,130 +14,9 @@
 package v1
 
 import (
-	"cmp"
-	"encoding/json"
-	"maps"
-	"reflect"
-	"slices"
-	"strings"
-
+	"github.com/perses/common/set"
 	"github.com/perses/perses/pkg/model/api/v1/common"
 )
-
-type Set[T comparable] map[T]struct{}
-
-func NewSet[T comparable](vals ...T) Set[T] {
-	s := Set[T]{}
-	for _, v := range vals {
-		s[v] = struct{}{}
-	}
-	return s
-}
-
-func MergeSet[T comparable](old, new Set[T]) Set[T] {
-	if new == nil {
-		return old
-	}
-	if old == nil {
-		return new
-	}
-	s := Set[T]{}
-	maps.Copy(s, new)
-	maps.Copy(s, old)
-	return s
-}
-
-func (s Set[T]) Add(vals ...T) {
-	for _, v := range vals {
-		s[v] = struct{}{}
-	}
-}
-
-func (s Set[T]) Remove(value T) {
-	delete(s, value)
-}
-
-func (s Set[T]) Contains(value T) bool {
-	_, ok := s[value]
-	return ok
-}
-
-func (s Set[T]) Merge(other Set[T]) {
-	for v := range other {
-		s.Add(v)
-	}
-}
-
-func (s Set[T]) TransformAsSlice() []T {
-	if s == nil {
-		return nil
-	}
-
-	var slice []T
-	for v := range s {
-		slice = append(slice, v)
-	}
-	slices.SortFunc(slice, compare[T])
-
-	return slice
-}
-
-func (s Set[T]) MarshalJSON() ([]byte, error) {
-	if len(s) == 0 {
-		return []byte("[]"), nil
-	}
-
-	return json.Marshal(s.TransformAsSlice())
-}
-
-func (s *Set[T]) UnmarshalJSON(b []byte) error {
-	var slice []T
-	if err := json.Unmarshal(b, &slice); err != nil {
-		return err
-	}
-	if len(slice) == 0 {
-		return nil
-	}
-	*s = make(map[T]struct{}, len(slice))
-	for _, v := range slice {
-		s.Add(v)
-	}
-	return nil
-}
-
-// compare has similar semantics to cmp.Compare except that it works for
-// strings and structs. When comparing Go structs, it only checks the struct
-// fields of string type.
-// If the compared values aren't strings or structs, they are considered equal.
-func compare[T comparable](a, b T) int {
-	switch reflect.TypeOf(a).Kind() {
-	case reflect.String:
-		return cmp.Compare(
-			reflect.ValueOf(a).String(),
-			reflect.ValueOf(b).String(),
-		)
-	case reflect.Struct:
-		return cmp.Compare(
-			buildKey(reflect.ValueOf(a)),
-			buildKey(reflect.ValueOf(b)),
-		)
-	}
-
-	return 0
-}
-
-func buildKey(v reflect.Value) string {
-	var key strings.Builder
-	for i := 0; i < v.Type().NumField(); i++ {
-		v := v.Field(i)
-		if v.Type().Kind() != reflect.String {
-			continue
-		}
-		key.WriteString(v.String())
-	}
-
-	return key.String()
-}
 
 type RuleUsage struct {
 	PromLink   string `json:"prom_link"`
@@ -153,9 +32,9 @@ type DashboardUsage struct {
 }
 
 type MetricUsage struct {
-	Dashboards     Set[DashboardUsage] `json:"dashboards,omitempty"`
-	RecordingRules Set[RuleUsage]      `json:"recordingRules,omitempty"`
-	AlertRules     Set[RuleUsage]      `json:"alertRules,omitempty"`
+	Dashboards     set.Set[DashboardUsage] `json:"dashboards,omitempty"`
+	RecordingRules set.Set[RuleUsage]      `json:"recordingRules,omitempty"`
+	AlertRules     set.Set[RuleUsage]      `json:"alertRules,omitempty"`
 }
 
 func MergeUsage(old, new *MetricUsage) *MetricUsage {
@@ -166,19 +45,19 @@ func MergeUsage(old, new *MetricUsage) *MetricUsage {
 		return old
 	}
 	return &MetricUsage{
-		Dashboards:     MergeSet(old.Dashboards, new.Dashboards),
-		AlertRules:     MergeSet(old.AlertRules, new.AlertRules),
-		RecordingRules: MergeSet(old.RecordingRules, new.RecordingRules),
+		Dashboards:     set.Merge(old.Dashboards, new.Dashboards),
+		AlertRules:     set.Merge(old.AlertRules, new.AlertRules),
+		RecordingRules: set.Merge(old.RecordingRules, new.RecordingRules),
 	}
 }
 
 type Metric struct {
-	Labels Set[string]  `json:"labels,omitempty"`
-	Usage  *MetricUsage `json:"usage,omitempty"`
+	Labels set.Set[string] `json:"labels,omitempty"`
+	Usage  *MetricUsage    `json:"usage,omitempty"`
 }
 
 type PartialMetric struct {
-	Usage           *MetricUsage   `json:"usage,omitempty"`
-	MatchingMetrics Set[string]    `json:"matchingMetrics,omitempty"`
-	MatchingRegexp  *common.Regexp `json:"matchingRegexp,omitempty"`
+	Usage           *MetricUsage    `json:"usage,omitempty"`
+	MatchingMetrics set.Set[string] `json:"matchingMetrics,omitempty"`
+	MatchingRegexp  *common.Regexp  `json:"matchingRegexp,omitempty"`
 }

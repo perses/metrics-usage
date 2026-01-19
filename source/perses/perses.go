@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/perses/common/async"
+	"github.com/perses/common/set"
 	"github.com/perses/metrics-usage/config"
 	"github.com/perses/metrics-usage/database"
 	"github.com/perses/metrics-usage/pkg/analyze/expr"
@@ -92,7 +93,7 @@ func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error
 	return nil
 }
 
-func (c *persesCollector) generateUsage(metricNames modelAPIV1.Set[string], currentDashboard *v1.Dashboard) map[string]*modelAPIV1.MetricUsage {
+func (c *persesCollector) generateUsage(metricNames set.Set[string], currentDashboard *v1.Dashboard) map[string]*modelAPIV1.MetricUsage {
 	metricUsage := make(map[string]*modelAPIV1.MetricUsage)
 	dashboardURL := fmt.Sprintf("%s/api/v1/projects/%s/dashboards/%s", c.persesURL, currentDashboard.Metadata.Project, currentDashboard.Metadata.Name)
 	for metricName := range metricNames {
@@ -104,7 +105,7 @@ func (c *persesCollector) generateUsage(metricNames modelAPIV1.Set[string], curr
 			})
 		} else {
 			metricUsage[metricName] = &modelAPIV1.MetricUsage{
-				Dashboards: modelAPIV1.NewSet(modelAPIV1.DashboardUsage{
+				Dashboards: set.New(modelAPIV1.DashboardUsage{
 					ID:   fmt.Sprintf("%s/%s", currentDashboard.Metadata.Project, currentDashboard.Metadata.Name),
 					Name: currentDashboard.Metadata.Name,
 					URL:  dashboardURL,

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/perses/common/set"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -35,21 +36,21 @@ func TestJSONMarshalMetricUsage(t *testing.T) {
 		{
 			name: "AlertRules",
 			usage: &MetricUsage{
-				AlertRules: NewSet(RuleUsage{Name: "foo"}, RuleUsage{Name: "bar"}),
+				AlertRules: set.New(RuleUsage{Name: "foo"}, RuleUsage{Name: "bar"}),
 			},
 			expectedJSON: `{"alertRules":[{"prom_link":"","group_name":"","name":"bar","expression":""},{"prom_link":"","group_name":"","name":"foo","expression":""}]}`,
 		},
 		{
 			name: "RecordingRules",
 			usage: &MetricUsage{
-				RecordingRules: NewSet(RuleUsage{Name: "foo"}, RuleUsage{Name: "bar"}),
+				RecordingRules: set.New(RuleUsage{Name: "foo"}, RuleUsage{Name: "bar"}),
 			},
 			expectedJSON: `{"recordingRules":[{"prom_link":"","group_name":"","name":"bar","expression":""},{"prom_link":"","group_name":"","name":"foo","expression":""}]}`,
 		},
 		{
 			name: "Dashboards",
 			usage: &MetricUsage{
-				Dashboards: NewSet(DashboardUsage{Name: "foo"}, DashboardUsage{Name: "bar"}),
+				Dashboards: set.New(DashboardUsage{Name: "foo"}, DashboardUsage{Name: "bar"}),
 			},
 			expectedJSON: `{"dashboards":[{"uid":"","title":"bar","url":""},{"uid":"","title":"foo","url":""}]}`,
 		},
@@ -84,7 +85,7 @@ func TestJSONUnmarshalMetricUsage(t *testing.T) {
 			name:  "AlertRules",
 			jason: `{"alertRules":[{"prom_link":"","group_name":"","name":"foo","expression":""},{"prom_link":"","group_name":"","name":"bar","expression":""}]}`,
 			expected: &MetricUsage{
-				AlertRules: NewSet(RuleUsage{Name: "foo"}, RuleUsage{Name: "bar"}),
+				AlertRules: set.New(RuleUsage{Name: "foo"}, RuleUsage{Name: "bar"}),
 			},
 		},
 	}

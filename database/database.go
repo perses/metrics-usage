@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/brunoga/deep"
+	"github.com/perses/common/set"
 	"github.com/perses/metrics-usage/config"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/common"
@@ -185,7 +186,7 @@ func (d *db) watchMetricsQueue() {
 			if _, ok := d.metrics[metricName]; !ok {
 				// As this queue only serves the purpose of storing missing metrics, we are only looking for the one not already present in the database.
 				d.metrics[metricName] = &v1.Metric{
-					Labels: make(v1.Set[string]),
+					Labels: make(set.Set[string]),
 				}
 				// This will be used to associate a metric with a partial one.
 				d.matchValidMetric(metricName)
@@ -254,11 +255,11 @@ func (d *db) watchLabelsQueue() {
 			if _, ok := d.metrics[metricName]; !ok {
 				// In this case, we should add the metric, because it means the metrics has been found from another source.
 				d.metrics[metricName] = &v1.Metric{
-					Labels: v1.NewSet(labels...),
+					Labels: set.New(labels...),
 				}
 			} else {
 				if d.metrics[metricName].Labels == nil {
-					d.metrics[metricName].Labels = v1.NewSet(labels...)
+					d.metrics[metricName].Labels = set.New(labels...)
 				} else {
 					d.metrics[metricName].Labels.Add(labels...)
 				}
@@ -310,7 +311,7 @@ func (d *db) deleteMetric(name string) {
 	}
 }
 
-func (d *db) matchPartialMetric(partialMetric string) (*common.Regexp, v1.Set[string]) {
+func (d *db) matchPartialMetric(partialMetric string) (*common.Regexp, set.Set[string]) {
 	re, err := generateRegexp(partialMetric)
 	if err != nil {
 		logrus.WithError(err).Errorf("unable to compile the partial metric name %q into a regexp", partialMetric)
@@ -319,7 +320,7 @@ func (d *db) matchPartialMetric(partialMetric string) (*common.Regexp, v1.Set[st
 	if re == nil {
 		return nil, nil
 	}
-	result := v1.NewSet[string]()
+	result := set.New[string]()
 	d.metricsMutex.Lock()
 	defer d.metricsMutex.Unlock()
 	for m := range d.metrics {
@@ -350,7 +351,7 @@ func (d *db) matchValidMetric(validMetric string) {
 		if isMatching(re, validMetric) {
 			matchingMetrics := partialMetric.MatchingMetrics
 			if matchingMetrics == nil {
-				matchingMetrics = v1.NewSet[string]()
+				matchingMetrics = set.New[string]()
 				partialMetric.MatchingMetrics = matchingMetrics
 			}
 			matchingMetrics.Add(validMetric)
