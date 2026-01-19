@@ -300,8 +300,8 @@ github.com/opentracing/opentracing-go v1.2.0 h1:uEJPy/1a5RIPAJ0Ov+OIO8OxWu77jEv+
 github.com/opentracing/opentracing-go v1.2.0/go.mod h1:GxEUsuufX4nBwe+T+Wl9TAgYrxe9dPLANfrWvHYVTgc=
 github.com/perses/common v0.29.1 h1:Pq+1Et9sW+2S2ZQ1W4uLktx8mNzWwCsuUMb1L20+wMU=
 github.com/perses/common v0.29.1/go.mod h1:pvg9bGOBqE8b9w84sgedPaixGuyeYRn1zq3eGZWRqs0=
-github.com/perses/perses v0.53.0-rc.0 h1:f3V1j6EqnKyXUY0mNt4Zp/T6+5U/5SjtCzLHxj9sJDQ=
-github.com/perses/perses v0.53.0-rc.0/go.mod h1:q+gB4M2yT//cO6GlCjhOTJLDoSrqtkMLul72Z0WOueI=
+github.com/perses/perses v0.53.0-rc.0.0.20260113112038-1e65a7475ba9 h1:jxl/UiS/Bd8YB58+w2k66G9KnIzHlLw/yrIEm6EhNvA=
+github.com/perses/perses v0.53.0-rc.0.0.20260113112038-1e65a7475ba9/go.mod h1:q3MmvXG6DVYfZ9VFQsjQdwnqLSyA9qYQ/xkLI52OIgI=
 github.com/perses/plugins/prometheus v0.56.0 h1:5wy5BV6i76OzDA411ebI2AakwOiG9V5BCo1LKHZwcGM=
 github.com/perses/plugins/prometheus v0.56.0/go.mod h1:YwDoyIkr7pxVyNQD9CP320tAaYqv6rIXOStGejfMaI8=
 github.com/pjbgf/sha1cd v0.3.2 h1:a9wb0bp1oC2TGwStyn0Umc/IGKQnEgF0vVaZ8QF8eo4=
