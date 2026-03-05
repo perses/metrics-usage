@@ -52,6 +52,8 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_TOKEN }}
           registry: 'quay.io'
+      - name: Install go deps
+        run: go mod download
       - name: install goreleaser
         uses: goreleaser/goreleaser-action@v7
         with:
