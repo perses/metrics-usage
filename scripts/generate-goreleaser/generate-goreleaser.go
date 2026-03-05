@@ -27,6 +27,7 @@ func main() {
 		ImageName:  "metrics-usage",
 		DebugImage: true,
 		BinaryIDs:  []string{"metrics-usage"},
+		Registry:   []string{"docker.io/persesdev", "quay.io/persesdev"},
 		ExtraFiles: []string{"LICENSE"},
 	})
 }
