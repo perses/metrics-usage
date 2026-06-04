@@ -30,6 +30,7 @@ import (
 )
 
 func main() {
+	app.InitFlag()
 	configFile := flag.String("config", "", "Path to the YAML configuration file for the API. Configuration settings can be overridden when using environment variables.")
 	pprof := flag.Bool("pprof", false, "Enable pprof")
 	flag.Parse()
@@ -97,7 +98,9 @@ func main() {
 		runner.WithTimerTasks(time.Duration(grafanaCollectorConfig.Period), grafanaCollector)
 	}
 
-	runner.HTTPServerBuilder().
+	runner.
+		WithDefaultLogrusBuilder().
+		HTTPServerBuilder().
 		ActivatePprof(*pprof).
 		APIRegistration(metric.NewAPI(db)).
 		APIRegistration(rules.NewAPI(db, queryAnalyzer)).

@@ -24,11 +24,11 @@ import (
 	"github.com/perses/metrics-usage/pkg/analyze/prometheus"
 	modelAPIV1 "github.com/perses/metrics-usage/pkg/api/v1"
 	v1 "github.com/perses/perses/pkg/model/api/v1"
-	"github.com/perses/perses/pkg/model/api/v1/common"
-	"github.com/perses/perses/pkg/model/api/v1/dashboard"
-	"github.com/perses/perses/pkg/model/api/v1/variable"
 	"github.com/perses/plugins/prometheus/sdk/go/query"
 	"github.com/perses/plugins/prometheus/sdk/go/variable/promql"
+	"github.com/perses/spec/go/common"
+	"github.com/perses/spec/go/dashboard"
+	"github.com/perses/spec/go/dashboard/variable"
 )
 
 var variableReplacer = strings.NewReplacer(
@@ -55,7 +55,7 @@ func Analyze(dashboard *v1.Dashboard, analyzer expr.Analyzer) (set.Set[string], 
 	return m1, inv1, append(err1, err2...)
 }
 
-func extractMetricUsageFromPanels(panels map[string]*v1.Panel, currentDashboard *v1.Dashboard, analyzer expr.Analyzer) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
+func extractMetricUsageFromPanels(panels map[string]*dashboard.Panel, currentDashboard *v1.Dashboard, analyzer expr.Analyzer) (set.Set[string], set.Set[string], []*modelAPIV1.LogError) {
 	var errs []*modelAPIV1.LogError
 	result := set.Set[string]{}
 	partialMetricsResult := set.Set[string]{}
