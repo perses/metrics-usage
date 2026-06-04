@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/perses/common/set"
+	"github.com/prometheus/prometheus/promql/parser"
 )
 
 // Analyzer is the interface for parsing query expressions and extracting metric names
@@ -33,7 +34,9 @@ const (
 func NewAnalyzer(engine string) (Analyzer, error) {
 	switch engine {
 	case EnginePromQL:
-		return &promqlAnalyzer{}, nil
+		return &promqlAnalyzer{
+			p: parser.NewParser(parser.Options{}),
+		}, nil
 	case EngineMetricsQL:
 		return &metricsqlAnalyzer{}, nil
 	default:

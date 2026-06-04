@@ -26,7 +26,7 @@ import (
 	"github.com/perses/common/set"
 	"github.com/perses/metrics-usage/config"
 	v1 "github.com/perses/metrics-usage/pkg/api/v1"
-	"github.com/perses/perses/pkg/model/api/v1/common"
+	"github.com/perses/spec/go/common"
 	"github.com/sirupsen/logrus"
 )
 

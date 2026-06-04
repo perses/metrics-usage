@@ -15,7 +15,7 @@ package v1
 
 import (
 	"github.com/perses/common/set"
-	"github.com/perses/perses/pkg/model/api/v1/common"
+	"github.com/perses/spec/go/common"
 )
 
 type RuleUsage struct {

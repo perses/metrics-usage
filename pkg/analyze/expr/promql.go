@@ -23,10 +23,12 @@ import (
 
 var validMetricName = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 
-type promqlAnalyzer struct{}
+type promqlAnalyzer struct {
+	p parser.Parser
+}
 
 func (a *promqlAnalyzer) Analyze(query string) (set.Set[string], set.Set[string], error) {
-	expr, err := parser.ParseExpr(query)
+	expr, err := a.p.ParseExpr(query)
 	if err != nil {
 		return nil, nil, err
 	}
