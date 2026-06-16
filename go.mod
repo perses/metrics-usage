@@ -7,12 +7,12 @@ require (
 	github.com/brunoga/deep v1.3.1
 	github.com/go-openapi/strfmt v0.26.3
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20260604125106-9550bcd4956c
-	github.com/labstack/echo/v4 v4.15.2
+	github.com/labstack/echo/v4 v4.15.4
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.31.0
 	github.com/perses/perses v0.54.0-beta.1
 	github.com/perses/plugins/prometheus v0.58.0-beta.1
-	github.com/perses/spec v0.2.0-beta.2
+	github.com/perses/spec v0.2.0-beta.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.68.1
 	github.com/prometheus/prometheus v0.312.0
@@ -95,7 +95,7 @@ require (
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -137,12 +137,12 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.52.0 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
-	golang.org/x/term v0.43.0 // indirect
-	golang.org/x/text v0.37.0 // indirect
+	golang.org/x/crypto v0.53.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
