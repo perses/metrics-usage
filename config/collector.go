@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/perses/perses/pkg/client/config"
-	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
+	"github.com/perses/spec/go/common"
 	"github.com/prometheus/common/model"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"

@@ -26,9 +26,9 @@ import (
 	v1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/plugins/prometheus/sdk/go/query"
 	"github.com/perses/plugins/prometheus/sdk/go/variable/promql"
-	"github.com/perses/spec/go/common"
 	"github.com/perses/spec/go/dashboard"
 	"github.com/perses/spec/go/dashboard/variable"
+	"github.com/perses/spec/go/plugin"
 )
 
 var variableReplacer = strings.NewReplacer(
@@ -160,7 +160,7 @@ func replaceVariables(expr string) string {
 	return variableReplacer.Replace(expr)
 }
 
-func convertPluginSpecToPromQLVariable(plugin common.Plugin) (promql.PluginSpec, error) {
+func convertPluginSpecToPromQLVariable(plugin plugin.Plugin) (promql.PluginSpec, error) {
 	data, err := json.Marshal(plugin.Spec)
 	if err != nil {
 		return promql.PluginSpec{}, err
@@ -170,7 +170,7 @@ func convertPluginSpecToPromQLVariable(plugin common.Plugin) (promql.PluginSpec,
 	return result, err
 }
 
-func convertPluginSpecToTimeSeriesQuery(plugin common.Plugin) (query.PluginSpec, error) {
+func convertPluginSpecToTimeSeriesQuery(plugin plugin.Plugin) (query.PluginSpec, error) {
 	data, err := json.Marshal(plugin.Spec)
 	if err != nil {
 		return query.PluginSpec{}, err
