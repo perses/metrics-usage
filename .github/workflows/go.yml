@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
@@ -56,7 +56,7 @@ jobs:
           enable_go_cache: false
           enable_npm: false
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9.2.1
+        uses: golangci/golangci-lint-action@v9.3.0
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
           version: v2.12.1
@@ -66,7 +66,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
