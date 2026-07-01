@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	github.com/VictoriaMetrics/metricsql v0.87.2
 	github.com/brunoga/deep v1.3.1
-	github.com/go-openapi/strfmt v0.26.3
+	github.com/go-openapi/strfmt v0.26.4
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20260608140303-399c66621c54
 	github.com/labstack/echo/v4 v4.15.4
 	github.com/lithammer/fuzzysearch v1.1.8
@@ -14,7 +14,7 @@ require (
 	github.com/perses/plugins/prometheus v0.58.0-beta.3
 	github.com/perses/spec v0.2.0-beta.6
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/common v0.68.1
+	github.com/prometheus/common v0.69.0
 	github.com/prometheus/prometheus v0.312.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
