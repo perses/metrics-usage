@@ -10,12 +10,12 @@ require (
 	github.com/labstack/echo/v4 v4.15.4
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.31.1
-	github.com/perses/perses v0.54.0-beta.2
-	github.com/perses/plugins/prometheus v0.58.0-beta.3
+	github.com/perses/perses v0.54.0-beta.3
+	github.com/perses/plugins/prometheus v0.58.0-beta.4
 	github.com/perses/spec v0.2.0-beta.6
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/common v0.69.0
-	github.com/prometheus/prometheus v0.312.0
+	github.com/prometheus/prometheus v0.313.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.36.0
