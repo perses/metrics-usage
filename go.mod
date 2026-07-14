@@ -3,7 +3,7 @@ module github.com/perses/metrics-usage
 go 1.26.2
 
 require (
-	github.com/VictoriaMetrics/metricsql v0.87.2
+	github.com/VictoriaMetrics/metricsql v0.87.3
 	github.com/brunoga/deep v1.3.1
 	github.com/go-openapi/strfmt v0.26.4
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20260608140303-399c66621c54
@@ -12,10 +12,10 @@ require (
 	github.com/perses/common v0.31.1
 	github.com/perses/perses v0.54.0-beta.3
 	github.com/perses/plugins/prometheus v0.58.0-beta.4
-	github.com/perses/spec v0.2.0-beta.6
+	github.com/perses/spec v0.2.0-beta.7
 	github.com/prometheus/client_golang v1.23.2
-	github.com/prometheus/common v0.69.0
-	github.com/prometheus/prometheus v0.313.0
+	github.com/prometheus/common v0.70.0
+	github.com/prometheus/prometheus v0.313.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.36.0
@@ -111,7 +111,7 @@ require (
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/procfs v0.19.2 // indirect
+	github.com/prometheus/procfs v0.21.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
