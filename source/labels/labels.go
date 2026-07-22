@@ -114,22 +114,27 @@ func (c *labelCollector) String() string {
 	return "labels collector"
 }
 
-func removeLabelName(labels []string) []string {
+func (c *labelCollector) getLabelsForMetric(ctx context.Context, metricName string, start, end time.Time) []string {
+	c.logger.Debugf("querying Prometheus to get label names for metric %s", metricName)
+	labels, _, queryErr := c.promClient.LabelNames(ctx, []string{metricName}, start, end)
+	if queryErr != nil {
+		c.logger.WithError(queryErr).Errorf("failed to query labels for the metric %q", metricName)
+		return nil
+	}
+
+	labels = removeLabelName(labels)
+	result := make([]string, 0, len(labels))
+	for _, label := range labels {
+		result = append(result, string(label))
+	}
+	return result
+}
+
+func removeLabelName(labels model.LabelNames) model.LabelNames {
 	for i, label := range labels {
 		if label == model.MetricNameLabel {
 			return append(labels[:i], labels[i+1:]...)
 		}
 	}
 	return labels
-}
-
-func (c *labelCollector) getLabelsForMetric(ctx context.Context, metricName string, start, end time.Time) []string {
-	c.logger.Debugf("querying Prometheus to get label names for metric %s", metricName)
-	labels, _, queryErr := c.promClient.LabelNames(ctx, []string{string(metricName)}, start, end)
-	if queryErr != nil {
-		c.logger.WithError(queryErr).Errorf("failed to query labels for the metric %q", metricName)
-		return nil
-	}
-
-	return removeLabelName(labels)
 }
