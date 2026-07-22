@@ -104,7 +104,7 @@ func (c *rulesCollector) getRules(ctx context.Context) (v1.RulesResult, error) {
 			break
 		}
 
-		result, err = c.promClient.Rules(ctx)
+		result, err = c.promClient.Rules(ctx, nil)
 		if err == nil {
 			c.logger.Infof("successfuly get the rules")
 			break
