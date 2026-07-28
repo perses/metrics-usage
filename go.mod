@@ -13,8 +13,8 @@ require (
 	github.com/perses/perses v0.54.0-rc.1
 	github.com/perses/plugins/prometheus v0.58.0-rc.1
 	github.com/perses/spec v0.2.0-rc.0
-	github.com/prometheus/client_golang v1.24.0
-	github.com/prometheus/common v0.70.0
+	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/common v0.70.1
 	github.com/prometheus/prometheus v0.313.1
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
