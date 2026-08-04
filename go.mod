@@ -10,12 +10,12 @@ require (
 	github.com/labstack/echo/v4 v4.15.4
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.31.2
-	github.com/perses/perses v0.54.0-rc.1
-	github.com/perses/plugins/prometheus v0.58.0-rc.1
-	github.com/perses/spec v0.2.0-rc.0
+	github.com/perses/perses v0.54.0
+	github.com/perses/plugins/prometheus v0.58.0
+	github.com/perses/spec v0.2.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/common v0.70.1
-	github.com/prometheus/prometheus v0.313.1
+	github.com/prometheus/prometheus v0.313.2
 	github.com/sirupsen/logrus v1.9.4
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/oauth2 v0.36.0
@@ -127,7 +127,7 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	github.com/zitadel/oidc/v3 v3.47.7 // indirect
+	github.com/zitadel/oidc/v3 v3.48.1 // indirect
 	github.com/zitadel/schema v1.3.2 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
