@@ -1,6 +1,6 @@
 module github.com/perses/metrics-usage
 
-go 1.26.5
+go 1.27.1
 
 require (
 	github.com/VictoriaMetrics/metricsql v0.87.3
