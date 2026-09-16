@@ -3,7 +3,7 @@ module github.com/perses/metrics-usage
 go 1.27.1
 
 require (
-	github.com/VictoriaMetrics/metricsql v0.87.3
+	github.com/VictoriaMetrics/metricsql v0.87.4
 	github.com/brunoga/deep v1.3.1
 	github.com/go-openapi/strfmt v0.27.2
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20260608140303-399c66621c54
