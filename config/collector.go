@@ -52,9 +52,13 @@ func NewHTTPClient(cfg HTTPClient) (*http.Client, error) {
 		Timeout:   connectionTimeout,
 	})
 	if cfg.OAuth != nil {
+		clientSecret, getClientSecretErr := cfg.OAuth.GetClientSecret()
+		if getClientSecretErr != nil {
+			return nil, getClientSecretErr
+		}
 		oauthConfig := &clientcredentials.Config{
 			ClientID:     cfg.OAuth.ClientID,
-			ClientSecret: cfg.OAuth.ClientSecret,
+			ClientSecret: clientSecret,
 			TokenURL:     cfg.OAuth.TokenURL,
 			Scopes:       cfg.OAuth.Scopes,
 			AuthStyle:    oauth2.AuthStyle(cfg.OAuth.AuthStyle),

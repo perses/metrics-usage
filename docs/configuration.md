@@ -380,7 +380,9 @@ This is the OAuth 2.0 client credentials flow.
 clientID: <string>
 
 # ClientSecret is the application's secret.
-clientSecret: <secret>
+# At most one of clientSecret and clientSecretFile is allowed, and one of them is required.
+[ clientSecret: <secret> ]
+[ clientSecretFile: <filename> ]
 
 # TokenURL is the resource server's token endpoint URL. This is a constant specific to each server.
 tokenURL: <url>
