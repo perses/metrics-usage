@@ -42,7 +42,7 @@ func (e *endpoint) RegisterRoute(ech *echo.Echo) {
 	ech.GET(fmt.Sprintf("%s/:id", path), e.GetMetric)
 	ech.DELETE(fmt.Sprintf("%s/:id", path), e.DeleteMetric)
 
-	ech.POST("/api/v1/partial_metrics", e.PushMetricsUsage)
+	ech.POST("/api/v1/partial_metrics", e.PushPartialMetricsUsage)
 	ech.GET("/api/v1/partial_metrics", e.ListPartialMetrics)
 	ech.GET("/api/v1/pending_usages", e.ListPendingUsages)
 }
