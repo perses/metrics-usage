@@ -64,7 +64,7 @@ var _ async.SimpleTask = &labelCollector{}
 func (c *labelCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	now := time.Now()
 	start := now.Add(time.Duration(-c.period))
-	labelValues, _, err := c.promClient.LabelValues(ctx, model.MetricNameLabel, nil, start, now)
+	labelValues, _, _, err := c.promClient.LabelValues(ctx, model.MetricNameLabel, nil, start, now)
 	if err != nil {
 		c.logger.WithError(err).Error("failed to query metrics")
 		return nil
@@ -116,7 +116,7 @@ func (c *labelCollector) String() string {
 
 func (c *labelCollector) getLabelsForMetric(ctx context.Context, metricName string, start, end time.Time) []string {
 	c.logger.Debugf("querying Prometheus to get label names for metric %s", metricName)
-	labels, _, queryErr := c.promClient.LabelNames(ctx, []string{metricName}, start, end)
+	labels, _, _, queryErr := c.promClient.LabelNames(ctx, []string{metricName}, start, end)
 	if queryErr != nil {
 		c.logger.WithError(queryErr).Errorf("failed to query labels for the metric %q", metricName)
 		return nil
