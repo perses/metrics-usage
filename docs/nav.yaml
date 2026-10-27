@@ -1,0 +1,20 @@
+# Navigation of the documentation published on https://perses.dev.
+#
+# The website (https://github.com/perses/website) reads this file for each published version of the documentation,
+# so the navigation evolves with the documentation. When you add, move or remove a page, update this file.
+# A page missing from this file is still published, but it can only be reached through links and the search.
+#
+# Syntax:
+#   - overview.md                          # page, the title is the first h1 of the page
+#   - Getting started: getting-started.md  # page with an explicit title
+#   - Concepts:                            # section
+#       - Dashboard: concepts/dashboard.md
+#   - Helm: helm-charts:installation.md    # page of another documentation of the website
+#                                          # (perses, operator, helm-charts or plugins), in its latest version
+#   - Plugins: /docs/plugins/              # link to another page of the website
+#   - Demo: https://demo.perses.dev        # external link
+
+- Overview: overview.md
+- Installation: install.md
+- Deployment: deployment.md
+- Configuration: configuration.md

@@ -176,7 +176,7 @@ Example:
 ```yaml
 metric_collector:
   enable: true
-  prometheus_client:
+  http_client:
     url: "https://prometheus.demo.do.prometheus.io"
 ```
 
