@@ -23,7 +23,7 @@ GOHOSTARCH            ?= $(shell $(GO) env GOHOSTARCH)
 COMMIT                := $(shell git rev-parse HEAD)
 DATE                  := $(shell date +%Y-%m-%d)
 BRANCH                := $(shell git rev-parse --abbrev-ref HEAD)
-VERSION               ?= $(shell cat VERSION)
+VERSION               ?= $(shell git describe --tags --always | sed 's/^v//')
 COVER_PROFILE         := coverage.txt
 PKG_LDFLAGS           := github.com/prometheus/common/version
 LDFLAGS               := -s -w -X ${PKG_LDFLAGS}.Version=${VERSION} -X ${PKG_LDFLAGS}.Revision=${COMMIT} -X ${PKG_LDFLAGS}.BuildDate=${DATE} -X ${PKG_LDFLAGS}.Branch=${BRANCH}
