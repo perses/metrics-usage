@@ -15,6 +15,7 @@ package metric
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/perses/common/async"
@@ -53,8 +54,7 @@ func (c *metricCollector) Execute(ctx context.Context, _ context.CancelFunc) err
 	start := now.Add(time.Duration(-c.period))
 	labelValues, _, _, err := c.client.LabelValues(ctx, model.MetricNameLabel, nil, start, now)
 	if err != nil {
-		c.logger.WithError(err).Error("failed to query metrics")
-		return nil
+		return fmt.Errorf("failed to query metrics: %w", err)
 	}
 	result := make([]string, 0, len(labelValues))
 	for _, metricName := range labelValues {
@@ -62,7 +62,7 @@ func (c *metricCollector) Execute(ctx context.Context, _ context.CancelFunc) err
 	}
 	// Finally, send the metric collected to the database; db will take care to store these data properly
 	if len(result) > 0 {
-		logrus.Infof("saving %d metrics", len(result))
+		c.logger.Infof("saving %d metrics", len(result))
 		c.db.EnqueueMetricList(result)
 	}
 	return nil

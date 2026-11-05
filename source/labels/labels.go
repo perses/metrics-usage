@@ -15,6 +15,7 @@ package labels
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -66,8 +67,7 @@ func (c *labelCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 	start := now.Add(time.Duration(-c.period))
 	labelValues, _, _, err := c.promClient.LabelValues(ctx, model.MetricNameLabel, nil, start, now)
 	if err != nil {
-		c.logger.WithError(err).Error("failed to query metrics")
-		return nil
+		return fmt.Errorf("failed to query metrics: %w", err)
 	}
 
 	var (
@@ -101,7 +101,7 @@ func (c *labelCollector) Execute(ctx context.Context, _ context.CancelFunc) erro
 	if c.metricUsageClient != nil {
 		// In this case, that means we have to send the data to a remote server.
 		if sendErr := c.metricUsageClient.Labels(result); sendErr != nil {
-			c.logger.WithError(sendErr).Error("Failed to send labels name")
+			return fmt.Errorf("failed to send labels name: %w", sendErr)
 		}
 		return nil
 	}

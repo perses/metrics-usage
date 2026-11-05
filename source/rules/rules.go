@@ -15,6 +15,7 @@ package rules
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/perses/common/async"
@@ -77,8 +78,7 @@ var _ async.SimpleTask = &rulesCollector{}
 func (c *rulesCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	result, err := c.getRules(ctx)
 	if err != nil {
-		c.logger.WithError(err).Error("Failed to get rules")
-		return nil
+		return fmt.Errorf("failed to get rules: %w", err)
 	}
 	metricsUsage, partialMetricsUsage, errs := prometheus.Analyze(result.Groups, c.promURL, c.analyzer)
 	for _, logErr := range errs {
