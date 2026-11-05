@@ -92,8 +92,7 @@ var _ async.SimpleTask = &grafanaCollector{}
 func (c *grafanaCollector) Execute(ctx context.Context, _ context.CancelFunc) error {
 	hits, err := c.collectAllDashboardUID(ctx)
 	if err != nil {
-		c.logger.WithError(err).Error("failed to collect dashboard UIDs")
-		return nil
+		return fmt.Errorf("failed to collect dashboard UIDs: %w", err)
 	}
 	c.logger.Infof("collecting %d Grafana dashboards", len(hits))
 

@@ -75,8 +75,7 @@ var _ async.SimpleTask = &persesCollector{}
 func (c *persesCollector) Execute(_ context.Context, _ context.CancelFunc) error {
 	dashboards, err := c.persesClient.List("")
 	if err != nil {
-		c.logger.WithError(err).Error("Failed to get dashboards")
-		return nil
+		return fmt.Errorf("failed to get dashboards: %w", err)
 	}
 
 	for _, dash := range dashboards {
