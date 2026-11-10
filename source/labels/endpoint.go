@@ -16,7 +16,7 @@ package labels
 import (
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	persesEcho "github.com/perses/common/echo"
 	"github.com/perses/metrics-usage/database"
 )
@@ -36,13 +36,13 @@ func (e *endpoint) RegisterRoute(ech *echo.Echo) {
 	ech.POST(path, e.PushLabels)
 }
 
-func (e *endpoint) PushLabels(ctx echo.Context) error {
+func (e *endpoint) PushLabels(ctx *echo.Context) error {
 	data := make(map[string][]string)
 	if err := ctx.Bind(&data); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	if len(data) > 0 {
 		e.db.EnqueueLabels(data)
 	}
-	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
+	return ctx.JSON(http.StatusAccepted, map[string]string{"message": "OK"})
 }

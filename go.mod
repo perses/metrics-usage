@@ -7,9 +7,9 @@ require (
 	github.com/brunoga/deep v1.3.1
 	github.com/go-openapi/strfmt v0.27.4
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20261015192556-fcf0a80b71e9
-	github.com/labstack/echo/v4 v4.16.3
+	github.com/labstack/echo/v5 v5.4.4
 	github.com/lithammer/fuzzysearch v1.1.8
-	github.com/perses/common v0.32.0
+	github.com/perses/common v0.33.0
 	github.com/perses/perses v0.55.0
 	github.com/perses/plugins/prometheus v0.59.0
 	github.com/perses/spec v0.3.0
@@ -96,6 +96,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
+	github.com/labstack/echo/v4 v4.16.3 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.1 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect

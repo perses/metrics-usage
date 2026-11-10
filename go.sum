@@ -270,6 +270,8 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/labstack/echo/v4 v4.16.3 h1:wAzM49wiBxHpZJQ621lminvdxbwfd1Cn6KwRThKV6nA=
 github.com/labstack/echo/v4 v4.16.3/go.mod h1:V/EQaTVHYJH92QhbQe7kFQ4mjgcjxLQQUQtAN87zZdw=
+github.com/labstack/echo/v5 v5.4.4 h1:Nag9Mee0M9sOcKjProYuDNiw60QisysgfbIgz5US5Cw=
+github.com/labstack/echo/v5 v5.4.4/go.mod h1:4iEGNQiPPZnkfYpNR/L6fINd3NLiGWUD5+eBotFALas=
 github.com/labstack/gommon v0.5.0 h1:6VSQ2NOzsnEJ5W6+84E0RbcaDDmgB6NIAzWCczTEe6c=
 github.com/labstack/gommon v0.5.0/go.mod h1:Rzlg7HHy1maLfzBYGg9NZcVuz1sA68HHhLjhcEllYE0=
 github.com/lithammer/fuzzysearch v1.1.8 h1:/HIuJnjHuXS8bKaiTMeeDlW2/AyIWk2brx1V8LFgLN4=
@@ -313,8 +315,8 @@ github.com/pandatix/go-abnf v0.5.3/go.mod h1:AE0KD3/VNoCjGzc1gqetRKshbI4SYErXQ/8
 github.com/pb33f/ordered-map/v2 v2.3.1 h1:5319HDO0aw4DA4gzi+zv4FXU9UlSs3xGZ40wcP1nBjY=
 github.com/pb33f/ordered-map/v2 v2.3.1/go.mod h1:qxFQgd0PkVUtOMCkTapqotNgzRhMPL7VvaHKbd1HnmQ=
 github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30/go.mod h1:85jBQOZwpVEaDAr341tbn15RS4fCAsIst0qp7i8ex1o=
-github.com/perses/common v0.32.0 h1:AWguYTc/RnOrcpVxbQR0tfG/4Bhuf/H5zqkM5AHm73A=
-github.com/perses/common v0.32.0/go.mod h1:wyQPbWVN8dI7h9lTWZQM5qwivFZ9yqa6YzNmqaTgkEI=
+github.com/perses/common v0.33.0 h1:TXGYw84xn/ZeTUy6P4Gkd0iHSlb4rIO6tzcqD4pfrug=
+github.com/perses/common v0.33.0/go.mod h1:WOXuYHSGjcfk50Q8pFdYlEOObIjRbpVVxB+s3Gr6pcg=
 github.com/perses/perses v0.55.0 h1:3XoFbJ6mCRb4k7jT8sTDst9bxZewR51QGw5bUApsOOA=
 github.com/perses/perses v0.55.0/go.mod h1:+HQNAtHCNJ8YhaXYdmMvidq3rQHw46OuqbNqKasIocY=
 github.com/perses/plugins/prometheus v0.59.0 h1:qhTnGfmMuxyJfKGQ6qA74/JkHCN8wA2YAQvw3weS7rE=
