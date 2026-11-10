@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/lithammer/fuzzysearch/fuzzy"
 	persesEcho "github.com/perses/common/echo"
 	"github.com/perses/metrics-usage/database"
@@ -47,19 +47,19 @@ func (e *endpoint) RegisterRoute(ech *echo.Echo) {
 	ech.GET("/api/v1/pending_usages", e.ListPendingUsages)
 }
 
-func (e *endpoint) GetMetric(ctx echo.Context) error {
+func (e *endpoint) GetMetric(ctx *echo.Context) error {
 	name := ctx.Param("id")
 	metric := e.db.GetMetric(name)
 	if metric == nil {
-		return echo.NewHTTPError(http.StatusNotFound)
+		return echo.ErrNotFound
 	}
 	return ctx.JSON(http.StatusOK, metric)
 }
 
-func (e *endpoint) DeleteMetric(ctx echo.Context) error {
+func (e *endpoint) DeleteMetric(ctx *echo.Context) error {
 	name := ctx.Param("id")
 	if !e.db.DeleteMetric(name) {
-		return echo.NewHTTPError(http.StatusNotFound)
+		return echo.ErrNotFound
 	}
 	return ctx.NoContent(http.StatusNoContent)
 }
@@ -127,55 +127,55 @@ func (r *request) filter(validMetricList map[string]*v1.Metric, partialMetricLis
 	return result
 }
 
-func (e *endpoint) ListMetrics(ctx echo.Context) error {
+func (e *endpoint) ListMetrics(ctx *echo.Context) error {
 	req := &request{}
 	err := ctx.Bind(req)
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	if req.Mode != "" && req.Mode != ExactMatch && req.Mode != FuzzyMatch && req.Mode != RegexMatch {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": fmt.Sprintf("invalid match mode: %s. Allowed: %s, %s or %s", req.Mode, ExactMatch, FuzzyMatch, RegexMatch)})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": fmt.Sprintf("invalid match mode: %s. Allowed: %s, %s or %s", req.Mode, ExactMatch, FuzzyMatch, RegexMatch)})
 	}
 	var partialMetricList map[string]*v1.PartialMetric
 	if req.MergePartialMetrics {
 		partialMetricList, err = e.db.ListPartialMetrics()
 		if err != nil {
-			return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
+			return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": err.Error()})
 		}
 	}
 	metricList, err := e.db.ListMetrics()
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": err.Error()})
 	}
 	return ctx.JSON(http.StatusOK, req.filter(metricList, partialMetricList))
 }
 
-func (e *endpoint) PushMetricsUsage(ctx echo.Context) error {
+func (e *endpoint) PushMetricsUsage(ctx *echo.Context) error {
 	data := make(map[string]*v1.MetricUsage)
 	if err := ctx.Bind(&data); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	e.db.EnqueueUsage(data)
-	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
+	return ctx.JSON(http.StatusAccepted, map[string]string{"message": "OK"})
 }
 
-func (e *endpoint) ListPartialMetrics(ctx echo.Context) error {
+func (e *endpoint) ListPartialMetrics(ctx *echo.Context) error {
 	list, err := e.db.ListPartialMetrics()
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, echo.Map{"message": err.Error()})
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"message": err.Error()})
 	}
 	return ctx.JSON(http.StatusOK, list)
 }
 
-func (e *endpoint) PushPartialMetricsUsage(ctx echo.Context) error {
+func (e *endpoint) PushPartialMetricsUsage(ctx *echo.Context) error {
 	data := make(map[string]*v1.MetricUsage)
 	if err := ctx.Bind(&data); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	e.db.EnqueuePartialMetricsUsage(data)
-	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
+	return ctx.JSON(http.StatusAccepted, map[string]string{"message": "OK"})
 }
 
-func (e *endpoint) ListPendingUsages(ctx echo.Context) error {
+func (e *endpoint) ListPendingUsages(ctx *echo.Context) error {
 	return ctx.JSON(http.StatusOK, e.db.ListPendingUsage())
 }

@@ -16,7 +16,7 @@ package rules
 import (
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	persesEcho "github.com/perses/common/echo"
 	"github.com/perses/metrics-usage/database"
 	"github.com/perses/metrics-usage/pkg/analyze/expr"
@@ -47,10 +47,10 @@ func (e *endpoint) RegisterRoute(ech *echo.Echo) {
 	ech.POST(path, e.PushRules)
 }
 
-func (e *endpoint) PushRules(ctx echo.Context) error {
+func (e *endpoint) PushRules(ctx *echo.Context) error {
 	var data request
 	if err := ctx.Bind(&data); err != nil {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{"message": err.Error()})
+		return ctx.JSON(http.StatusBadRequest, map[string]string{"message": err.Error()})
 	}
 	metricUsage, partialMetricUsage, errs := prometheus.Analyze(data.Groups, data.Source, e.analyzer)
 	for _, logErr := range errs {
@@ -62,5 +62,5 @@ func (e *endpoint) PushRules(ctx echo.Context) error {
 	if len(partialMetricUsage) > 0 {
 		e.db.EnqueuePartialMetricsUsage(partialMetricUsage)
 	}
-	return ctx.JSON(http.StatusAccepted, echo.Map{"message": "OK"})
+	return ctx.JSON(http.StatusAccepted, map[string]string{"message": "OK"})
 }
