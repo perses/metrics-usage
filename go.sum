@@ -317,8 +317,8 @@ github.com/pb33f/go-yaml v0.1.1/go.mod h1:QvWdkHP5VjFYAeHMQUkaPQqREaQnBNOXmWzAjN
 github.com/pb33f/ordered-map/v2 v2.3.2 h1:wDyaZ2Pv9QLh64X4utCeD5Zoi9nIv2aW3lwv172O5PQ=
 github.com/pb33f/ordered-map/v2 v2.3.2/go.mod h1:1OhFrXu3OYw3kM+FXF+Ug3ugmmZ9LE8z0JfQMLvtV0w=
 github.com/pborman/getopt v0.0.0-20170112200414-7148bc3a4c30/go.mod h1:85jBQOZwpVEaDAr341tbn15RS4fCAsIst0qp7i8ex1o=
-github.com/perses/common v0.33.0 h1:TXGYw84xn/ZeTUy6P4Gkd0iHSlb4rIO6tzcqD4pfrug=
-github.com/perses/common v0.33.0/go.mod h1:WOXuYHSGjcfk50Q8pFdYlEOObIjRbpVVxB+s3Gr6pcg=
+github.com/perses/common v0.34.0 h1:IlpzaFClG3jUXvnE8YSWJXrGgzC/Pbnkd3gdbtI1jVc=
+github.com/perses/common v0.34.0/go.mod h1:WOXuYHSGjcfk50Q8pFdYlEOObIjRbpVVxB+s3Gr6pcg=
 github.com/perses/perses v0.55.1 h1:FuXS5KB1gT4OGx/GJS7u/UVhZ1aGqVlDRSjIzEaYXcY=
 github.com/perses/perses v0.55.1/go.mod h1:/8Ow2NFrG3ViGK0KgTau6L9a1WVLpB293oQ5x5Bhe50=
 github.com/perses/plugins/prometheus v0.59.1 h1:BWTyfkJQK3eUn9LOOAjfmR2r2m0p5Vi/z4WICH6DRrQ=
