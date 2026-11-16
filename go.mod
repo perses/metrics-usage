@@ -9,7 +9,7 @@ require (
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20261015192556-fcf0a80b71e9
 	github.com/labstack/echo/v5 v5.4.4
 	github.com/lithammer/fuzzysearch v1.1.8
-	github.com/perses/common v0.33.0
+	github.com/perses/common v0.34.0
 	github.com/perses/perses v0.55.1
 	github.com/perses/plugins/prometheus v0.59.1
 	github.com/perses/spec v0.3.0
