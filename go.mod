@@ -7,7 +7,7 @@ require (
 	github.com/brunoga/deep v1.3.1
 	github.com/go-openapi/strfmt v0.27.4
 	github.com/grafana/grafana-openapi-client-go v0.0.0-20261015192556-fcf0a80b71e9
-	github.com/labstack/echo/v5 v5.4.5
+	github.com/labstack/echo/v5 v5.4.7
 	github.com/lithammer/fuzzysearch v1.1.8
 	github.com/perses/common v0.34.0
 	github.com/perses/perses v0.55.1
