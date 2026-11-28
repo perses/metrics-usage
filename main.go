@@ -26,8 +26,11 @@ import (
 	"github.com/perses/metrics-usage/source/metric"
 	"github.com/perses/metrics-usage/source/perses"
 	"github.com/perses/metrics-usage/source/rules"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 )
+
+const metricNamespace = "metrics_usage"
 
 func main() {
 	app.InitFlag()
@@ -49,7 +52,8 @@ func main() {
 	logrus.Infof("Using query parser engine: %s", conf.QueryParser.Engine)
 
 	db := database.New(conf.Database)
-	runner := app.NewRunner().WithDefaultHTTPServer("metrics_usage")
+	prometheus.MustRegister(database.NewTelemetry(metricNamespace, db))
+	runner := app.NewRunner().WithDefaultHTTPServer(metricNamespace)
 
 	if conf.MetricCollector.Enable {
 		metricCollectorConfig := conf.MetricCollector
