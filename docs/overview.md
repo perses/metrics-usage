@@ -259,6 +259,24 @@ known metrics they match:
 }
 ```
 
+### Telemetry
+
+`GET /metrics` exposes the telemetry of Metrics Usage itself in the Prometheus format. Besides the metrics of the HTTP
+server and of the Go runtime, it exposes the number of metrics analyzed, split between the metrics used and the ones
+not used:
+
+```text
+# HELP metrics_usage_metrics_analyzed Number of metrics analyzed, partitioned by whether they are used by a dashboard or a rule.
+# TYPE metrics_usage_metrics_analyzed gauge
+metrics_usage_metrics_analyzed{used="false"} 45124
+metrics_usage_metrics_analyzed{used="true"} 56321
+```
+
+A metric is counted as used when it has a usage, or when it is matched by a
+[partial metric](#metrics-partial-metrics-and-pending-usages) that has a usage. It is the same split as
+`/api/v1/metrics?merge_partial_metrics=true` with `used=true` and `used=false`. The total number of metrics analyzed is
+`sum(metrics_usage_metrics_analyzed)`.
+
 ## What's next
 
 - [Install Metrics Usage](./install.md)

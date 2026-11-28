@@ -145,6 +145,18 @@ The API endpoint `/api/v1/pending_usages` is exposing usage associated to metric
 
 It's even possible usage is never associated as the metric doesn't exist anymore.
 
+### Telemetry
+
+The endpoint `/metrics` exposes the telemetry of Metrics Usage in the Prometheus format.
+It includes the number of metrics analyzed, split between the metrics used and the ones not used:
+
+```text
+metrics_usage_metrics_analyzed{used="false"} 45124
+metrics_usage_metrics_analyzed{used="true"} 56321
+```
+
+A metric is counted as used when it has a usage, or when it is matched by a partial metric that has a usage.
+
 ## Different way to deploy it
 
 ### Central instance

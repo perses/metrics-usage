@@ -37,6 +37,7 @@ type Database interface {
 	GetMetric(name string) *v1.Metric
 	ListMetrics() (map[string]*v1.Metric, error)
 	ListPartialMetrics() (map[string]*v1.PartialMetric, error)
+	CountMetrics() (used, unused int)
 	ListPendingUsage() map[string]*v1.MetricUsage
 	EnqueueMetricList(metrics []string)
 	EnqueuePartialMetricsUsage(usages map[string]*v1.MetricUsage)
@@ -143,6 +144,24 @@ func (d *db) ListPartialMetrics() (map[string]*v1.PartialMetric, error) {
 	d.partialMetricsUsageMutex.Lock()
 	defer d.partialMetricsUsageMutex.Unlock()
 	return deep.Copy(d.partialMetrics)
+}
+
+// CountMetrics returns the number of metrics stored in the database, split between the metrics used and the ones not used.
+// A metric is used when it has a usage, or when it is matched by a partial metric that has a usage.
+// It is the same split as /api/v1/metrics with the query parameters used and merge_partial_metrics.
+func (d *db) CountMetrics() (used, unused int) {
+	// The partial metrics are read before the metrics, so the two mutexes are never held at the same time.
+	usedThroughPartialMetrics := d.listMetricsUsedThroughPartialMetrics()
+	d.metricsMutex.Lock()
+	defer d.metricsMutex.Unlock()
+	for metricName, metric := range d.metrics {
+		if metric.Usage != nil || usedThroughPartialMetrics.Contains(metricName) {
+			used++
+		} else {
+			unused++
+		}
+	}
+	return used, unused
 }
 
 func (d *db) EnqueueMetricList(metrics []string) {
@@ -309,6 +328,19 @@ func (d *db) deleteMetric(name string) {
 			partialMetric.MatchingMetrics.Remove(name)
 		}
 	}
+}
+
+func (d *db) listMetricsUsedThroughPartialMetrics() set.Set[string] {
+	d.partialMetricsUsageMutex.Lock()
+	defer d.partialMetricsUsageMutex.Unlock()
+	result := set.New[string]()
+	for _, partialMetric := range d.partialMetrics {
+		if partialMetric.Usage == nil {
+			continue
+		}
+		result.Merge(partialMetric.MatchingMetrics)
+	}
+	return result
 }
 
 func (d *db) matchPartialMetric(partialMetric string) (*common.Regexp, set.Set[string]) {
